@@ -1,0 +1,12 @@
+services:
+  app:
+    build: .
+    container_name: bh-investment-insights
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./data:/app/data        # persists raw and processed data locally
+    environment:
+      - PYTHONUNBUFFERED=1
+      - JAVA_TOOL_OPTIONS=-Xmx1g   # caps JVM heap — keeps container lean
+    restart: unless-stopped
