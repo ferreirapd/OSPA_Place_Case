@@ -1,5 +1,5 @@
 """
-Script de validação dos Parquets gerados pelo ETL do projeto BH Investment Insights.
+Script de validação dos Parquets gerados pelo ETL do projeto OSPA Place Case.
 
 Execução dentro do container:
     docker-compose exec app python validate_etl.py
@@ -10,7 +10,6 @@ Ou diretamente no host (se pandas instalado):
 
 import sys
 from pathlib import Path
-
 import pandas as pd
 
 # ── Configuração ──────────────────────────────────────────────────────────────
