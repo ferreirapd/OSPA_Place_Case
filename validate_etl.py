@@ -17,39 +17,63 @@ import pandas as pd
 
 PROCESSED_DIR = Path("data/processed")
 
-# Cada entrada: (arquivo, coluna_bairro_esperada, colunas_numericas_esperadas)
 PARQUET_SPECS: dict[str, dict] = {
     "empresas_por_bairro.parquet": {
         "col_bairro": "bairro",
         "cols_numericas": ["total_empresas"],
         "score_col": None,
+        # Nulos esperados em dimensões opcionais — sem threshold de alerta
+        "nulos_ok": [],
     },
     "acessibilidade_por_bairro.parquet": {
         "col_bairro": "bairro",
         "cols_numericas": ["total_pontos_onibus"],
         "score_col": None,
+        "nulos_ok": [],
     },
     "qualidade_urbana_por_bairro.parquet": {
         "col_bairro": "bairro",
         "cols_numericas": [],
         "score_col": None,
+        "nulos_ok": [],
     },
     "matriz_od_agregada.parquet": {
         "col_bairro": "bairro",
         "cols_numericas": [],
         "score_col": None,
+        "nulos_ok": [],
     },
     "score_final.parquet": {
         "col_bairro": "bairro",
         "cols_numericas": ["score_final"],
         "score_col": "score_final",
+        # No score_final, nulos em colunas de dimensões são esperados:
+        # nem todo bairro tem parque ou equipamento esportivo registrado.
+        "nulos_ok": [
+            "total_empresas", "diversidade_setores",
+            "setor_dominante", "setor_dominante_nome",
+            "total_parques", "total_equipamentos_esportivos",
+            "total_pontos_onibus", "total_embarques_dia", "total_acidentes",
+            "total_viagens_originadas",
+        ],
     },
 }
 
-# Bairros de BH que devem existir nos dados — validação de sanidade básica
+# Bairros que DEVEM existir em todo parquet que use nomes populares.
+# Todos em MAIÚSCULAS para bater com o padrão do ETL.
+# Critério de seleção: bairros grandes, sem ambiguidade de nome,
+# confirmados no dataset de atividade econômica (~425 bairros).
+# Removidos: "CONTORNO" (avenida, não bairro no cadastro PBH),
+#            "SANTA TERESA" (aparece às vezes como "STA TERESA").
 BAIRROS_CONHECIDOS = [
-    "Savassi", "Lourdes", "Centro", "Pampulha", "Buritis",
-    "Floresta", "Santa Teresa", "Contorno",
+    "SAVASSI",
+    "LOURDES",
+    "CENTRO",
+    "PAMPULHA",
+    "BURITIS",
+    "FLORESTA",
+    "FUNCIONARIOS",
+    "BARREIRO",
 ]
 
 SEPARATOR = "─" * 60
@@ -58,7 +82,6 @@ SEPARATOR = "─" * 60
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def secao(titulo: str) -> None:
-    """Imprime cabeçalho de seção formatado."""
     print(f"\n{SEPARATOR}")
     print(f"  {titulo}")
     print(SEPARATOR)
@@ -89,12 +112,10 @@ def validar_estrutura(nome: str, spec: dict) -> pd.DataFrame | None:
     secao(f"ETAPA 1 — Estrutura: {nome}")
     caminho = PROCESSED_DIR / nome
 
-    # 1a. Arquivo existe?
     if not caminho.exists():
         erro(f"Arquivo não encontrado: {caminho}")
         return None
 
-    # 1b. Carrega
     try:
         df = pd.read_parquet(caminho)
         ok(f"Carregado com sucesso — shape: {df.shape}")
@@ -102,26 +123,26 @@ def validar_estrutura(nome: str, spec: dict) -> pd.DataFrame | None:
         erro(f"Falha ao carregar: {e}")
         return None
 
-    # 1c. Colunas
+    nulos_ok: list[str] = spec.get("nulos_ok", [])
+
     print(f"\n  Colunas ({len(df.columns)}):")
     for col in df.columns:
         dtype = str(df[col].dtype)
         nulos = df[col].isna().sum()
-        pct = nulos / len(df) * 100
-        flag = "⚠️ " if pct > 20 else "  "
+        pct   = nulos / len(df) * 100
+        # Só emite ⚠️ se: >20% de nulos E coluna não está na lista de nulos esperados
+        flag = "⚠️ " if (pct > 20 and col not in nulos_ok) else "  "
         print(f"    {flag} {col:<40} dtype={dtype:<15} nulos={nulos} ({pct:.1f}%)")
 
-    # 1d. Coluna de bairro existe?
     col_bairro = spec["col_bairro"]
     if col_bairro in df.columns:
         ok(f"Coluna de bairro '{col_bairro}' encontrada")
     else:
         warn(
             f"Coluna de bairro '{col_bairro}' NÃO encontrada. "
-            f"Colunas disponíveis: {df.columns.tolist()}"
+            f"Disponíveis: {df.columns.tolist()}"
         )
 
-    # 1e. Colunas numéricas esperadas
     for col in spec["cols_numericas"]:
         if col in df.columns:
             ok(f"Coluna numérica '{col}' presente")
@@ -145,49 +166,72 @@ def validar_sanidade(nome: str, df: pd.DataFrame, spec: dict) -> None:
 
     col_bairro = spec["col_bairro"]
 
-    # Guard: DataFrame vazio não tem o que validar
     if len(df) == 0:
         warn("DataFrame vazio — ETL não gerou linhas para este arquivo")
         return
 
-    # 2a. Bairros conhecidos presentes?
+    # ── 2a. Bairros conhecidos ────────────────────────────────────────────────
     if col_bairro in df.columns and df[col_bairro].dtype == object:
-        bairros_no_df = df[col_bairro].str.upper().tolist()
+
+        # Normaliza a coluna para MAIÚSCULAS ASCII sem acento — mesmo padrão do ETL
+        bairros_norm = (
+            df[col_bairro]
+            .str.strip()
+            .str.upper()
+            .str.normalize("NFD")
+            .str.encode("ascii", errors="ignore")
+            .str.decode("ascii")
+        )
+        bairros_set = set(bairros_norm.tolist())
+
         for bairro in BAIRROS_CONHECIDOS:
-            encontrado = any(bairro.upper() in b for b in bairros_no_df)
-            if encontrado:
+            # Normaliza o bairro de referência também (já está em upper/ASCII, mas por garantia)
+            bairro_norm = (
+                bairro.strip().upper()
+                .encode("ascii", errors="ignore").decode("ascii")
+            )
+            if bairro_norm in bairros_set:
                 ok(f"Bairro '{bairro}' encontrado")
             else:
-                warn(f"Bairro '{bairro}' NÃO encontrado — pode ser nome diferente")
+                warn(f"Bairro '{bairro}' NÃO encontrado no parquet")
+
     elif col_bairro in df.columns:
-        warn(f"Coluna '{col_bairro}' existe mas dtype={df[col_bairro].dtype} — esperado object/string")
+        warn(
+            f"Coluna '{col_bairro}' tem dtype={df[col_bairro].dtype} "
+            "— esperado object/string"
+        )
     else:
-        warn("Pulando verificação de bairros — coluna de bairro ausente")
+        warn("Pulando verificação de bairros — coluna ausente")
 
-    # 2b. Duplicatas por bairro?
+    # ── 2b. Cardinalidade ────────────────────────────────────────────────────
     if col_bairro in df.columns:
-        dupes = df[col_bairro].duplicated().sum()
-        if dupes == 0:
-            ok("Sem bairros duplicados")
+        n_unique = df[col_bairro].nunique()
+        n_total  = len(df)
+        if n_unique < n_total:
+            warn(
+                f"{n_total - n_unique} bairros duplicados "
+                f"({n_unique} únicos de {n_total} linhas) — possível bug no GROUP BY"
+            )
         else:
-            warn(f"{dupes} bairros duplicados — possível problema no GROUP BY do ETL")
+            ok(f"Cardinalidade OK: {n_unique} bairros únicos, sem duplicatas")
 
-    # 2c. Score final: distribuição
+    # ── 2c. Score: distribuição e range ──────────────────────────────────────
     score_col = spec["score_col"]
     if score_col and score_col in df.columns:
         s = df[score_col]
         print(f"\n  Distribuição de '{score_col}':")
-        print(f"    min={s.min():.4f}  max={s.max():.4f}  "
-              f"mean={s.mean():.4f}  std={s.std():.4f}")
+        print(f"    min={s.min():.2f}  max={s.max():.2f}  "
+              f"mean={s.mean():.2f}  std={s.std():.2f}")
 
-        # Score deve estar entre 0 e 100
-        fora_do_range = ((s < 0) | (s > 100)).sum()
-        if fora_do_range == 0:
-            ok("Todos os scores entre 0 e 100 ✓")
+        fora = ((s < 0) | (s > 100)).sum()
+        if fora == 0:
+            ok("Todos os scores no intervalo [0, 100] ✓")
         else:
-            warn(f"{fora_do_range} scores fora do intervalo [0, 100]")
+            erro(
+                f"{fora} scores fora de [0, 100] — "
+                "verifique a fórmula de score.py (multiplicação duplicada?)"
+            )
 
-        # Top 10 bairros
         if col_bairro in df.columns:
             print("\n  🏆 Top 10 bairros por score:")
             top10 = (
@@ -199,21 +243,33 @@ def validar_sanidade(nome: str, df: pd.DataFrame, spec: dict) -> None:
             top10.index += 1
             print(top10.to_string())
 
-    # 2d. Colunas numéricas: valores negativos inesperados
+    # ── 2d. Valores negativos em métricas de contagem ────────────────────────
     for col in spec["cols_numericas"]:
         if col in df.columns and col != score_col:
-            negativos = (df[col] < 0).sum()
+            negativos = (pd.to_numeric(df[col], errors="coerce") < 0).sum()
             if negativos > 0:
-                warn(f"'{col}' tem {negativos} valores negativos — verifique")
+                warn(f"'{col}': {negativos} valores negativos inesperados")
             else:
                 ok(f"'{col}' sem valores negativos")
+
+    # ── 2e. Acidentes: verifica se NÃO são todos iguais (bug do parquet stale) ──
+    if "total_acidentes" in df.columns:
+        n_uniq = pd.to_numeric(df["total_acidentes"], errors="coerce").nunique()
+        if n_uniq <= 1:
+            erro(
+                "total_acidentes tem apenas 1 valor único — "
+                "parquet stale da versão antiga (contagem global). "
+                "Rode o ETL completo para regenerar."
+            )
+        else:
+            ok(f"total_acidentes: {n_uniq} valores distintos ✓ (spatial join funcionando)")
 
 
 # ── Etapa 3: Compatibilidade Streamlit ───────────────────────────────────────
 
 def validar_streamlit(nome: str, df: pd.DataFrame, spec: dict) -> None:
     """
-    Simula o que o Streamlit faz ao carregar o Parquet.
+    Simula checagens que o Streamlit faz ao renderizar o DataFrame.
 
     :param nome: Nome do arquivo para exibição
     :param df: DataFrame já carregado
@@ -221,21 +277,19 @@ def validar_streamlit(nome: str, df: pd.DataFrame, spec: dict) -> None:
     """
     secao(f"ETAPA 3 — Compatibilidade Streamlit: {nome}")
 
-    # 3a. Serialização JSON (st.dataframe usa isso internamente)
     try:
         _ = df.to_json(orient="records")
         ok("Serialização JSON (st.dataframe) OK")
     except Exception as e:
         erro(f"Falha na serialização JSON: {e}")
 
-    # 3b. Colunas com tipos object que podem causar problema
+    # Colunas object são normais (bairro, setor_dominante…) — só avisa se houver
     obj_cols = df.select_dtypes(include="object").columns.tolist()
     if obj_cols:
-        warn(f"Colunas 'object' que podem precisar de cast: {obj_cols}")
+        print(f"  ℹ️   Colunas string (object): {obj_cols}")
     else:
-        ok("Sem colunas dtype=object problemáticas")
+        ok("Sem colunas dtype=object")
 
-    # 3c. Index padrão (Streamlit prefere RangeIndex)
     if isinstance(df.index, pd.RangeIndex):
         ok("Index é RangeIndex — compatível com Streamlit")
     else:
@@ -265,7 +319,6 @@ def main() -> None:
         validar_streamlit(nome, df, spec)
         resultados[nome] = True
 
-    # Resumo final
     secao("RESUMO FINAL")
     for nome, sucesso in resultados.items():
         if sucesso:
@@ -276,7 +329,7 @@ def main() -> None:
     falhas = sum(1 for v in resultados.values() if not v)
     if falhas == 0:
         print("\n  🎉 Todos os Parquets passaram nas validações estruturais.")
-        print("  Revise os ⚠️  acima para ajustes negociais antes do Streamlit.\n")
+        print("  Revise os ⚠️  e ❌  acima para ajustes negociais.\n")
     else:
         print(f"\n  {falhas} arquivo(s) com falha crítica — verifique o ETL.\n")
         sys.exit(1)
