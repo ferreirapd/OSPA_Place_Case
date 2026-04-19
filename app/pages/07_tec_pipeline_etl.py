@@ -3,18 +3,23 @@ Página Técnica: Pipeline ETL — diagrama de fluxo e código por etapa.
 """
 
 from pathlib import Path
-
 import streamlit as st
 
 ETL_DIR = Path(__file__).resolve().parents[2] / "etl"
 
-st.set_page_config(page_title="Pipeline ETL · Visão Técnica", layout="wide")
+st.set_page_config(
+    page_title="Pipeline ETL · Visão Técnica",
+    layout="wide"
+)
 st.title("🔄 Pipeline ETL")
 st.caption("Diagrama de fluxo, decisões técnicas e código-fonte por etapa")
 st.markdown("---")
 
 
-def _show_code(path: Path, label: str) -> None:
+def _show_code(
+    path: Path,
+    label: str
+) -> None:
     """
     Exibe o código-fonte de um arquivo dentro de um expander.
 

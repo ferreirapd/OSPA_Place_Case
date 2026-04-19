@@ -3,17 +3,18 @@ Página: Visão Geral de BH — métricas macro do ecossistema econômico.
 """
 
 from pathlib import Path
-
 import pandas as pd
 import streamlit as st
 from streamlit_folium import st_folium
-
 from app.components.graficos import bar_ranking
 from app.components.mapas import choropleth_map
 
 PROCESSED = Path(__file__).resolve().parents[2] / "data" / "processed"
 
-st.set_page_config(page_title="Visão Geral · BH Investment Insights", layout="wide")
+st.set_page_config(
+    page_title="Visão Geral · BH Investment Insights",
+    layout="wide"
+)
 st.title("📊 Visão Geral de Belo Horizonte")
 st.caption("Panorama econômico consolidado por bairro")
 st.markdown("---")

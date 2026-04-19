@@ -4,7 +4,10 @@ Página Técnica: Visão de Futuro — evolução da plataforma e novas fontes.
 
 import streamlit as st
 
-st.set_page_config(page_title="Visão de Futuro · Visão Técnica", layout="wide")
+st.set_page_config(
+    page_title="Visão de Futuro · Visão Técnica",
+    layout="wide"
+)
 st.title("🔭 Visão de Futuro")
 st.caption("Como a plataforma pode evoluir — novas fontes, parceiros e capacidades analíticas")
 st.markdown("---")

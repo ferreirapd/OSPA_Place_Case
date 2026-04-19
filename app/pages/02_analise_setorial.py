@@ -3,16 +3,17 @@ Página: Análise Setorial — distribuição de CNAEs por bairro.
 """
 
 from pathlib import Path
-
 import pandas as pd
 import streamlit as st
-
 from app.components.graficos import bar_ranking, pie_setores
 
 PROCESSED = Path(__file__).resolve().parents[2] / "data" / "processed"
 RAW = Path(__file__).resolve().parents[2] / "data" / "raw"
 
-st.set_page_config(page_title="Análise Setorial · BH Investment Insights", layout="wide")
+st.set_page_config(
+    page_title="Análise Setorial · BH Investment Insights",
+    layout="wide"
+)
 st.title("🏭 Análise Setorial")
 st.caption("Distribuição de atividades econômicas por setor e bairro")
 st.markdown("---")

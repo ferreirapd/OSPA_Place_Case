@@ -4,7 +4,10 @@ Página Técnica: Arquitetura Atual — como o projeto está estruturado hoje.
 
 import streamlit as st
 
-st.set_page_config(page_title="Arquitetura Atual · Visão Técnica", layout="wide")
+st.set_page_config(
+    page_title="Arquitetura Atual · Visão Técnica",
+    layout="wide"
+)
 st.title("⚙️ Arquitetura Atual")
 st.caption("Como o projeto está estruturado na entrega")
 st.markdown("---")

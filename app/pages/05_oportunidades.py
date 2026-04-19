@@ -3,17 +3,18 @@ Página: Mapa de Oportunidades — score final de atratividade por bairro.
 """
 
 from pathlib import Path
-
 import pandas as pd
 import streamlit as st
 from streamlit_folium import st_folium
-
 from app.components.graficos import bar_ranking, radar_bairro, scatter_dimensoes
 from app.components.mapas import score_map
 
 PROCESSED = Path(__file__).resolve().parents[2] / "data" / "processed"
 
-st.set_page_config(page_title="Oportunidades · BH Investment Insights", layout="wide")
+st.set_page_config(
+    page_title="Oportunidades · BH Investment Insights",
+    layout="wide"
+)
 st.title("🎯 Mapa de Oportunidades")
 st.caption(
     "Score de atratividade para investimento por bairro — "

@@ -1,4 +1,4 @@
-# 🏙️ BH Investment Insights
+# 🏙️ OSPA Place Data Engineer Case - Pedro Ferreira
 
 Plataforma de dados para orientar decisões de investimento em Belo Horizonte,
 construída sobre dados públicos do [Portal de Dados Abertos da PBH](https://dados.pbh.gov.br).
@@ -21,7 +21,7 @@ por bairro com três dimensões:
 ## Estrutura do Repositório
 
 ```
-bh-investment-insights/
+OSPA_Place_Case/
 │
 ├── data/
 │   ├── raw/            # Dados brutos (não versionados)
@@ -64,8 +64,8 @@ bh-investment-insights/
 ### 1. Clone o repositório
 
 ```bash
-git clone https://github.com/ferreirapd/bh-investment-insights.git
-cd bh-investment-insights
+git clone https://github.com/ferreirapd/OSPA_Place_Case.git
+cd OSPA_Place_Case
 ```
 
 ### 2. Build da imagem Docker

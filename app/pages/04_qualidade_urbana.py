@@ -3,17 +3,18 @@ Página: Qualidade Urbana — parques e equipamentos esportivos por bairro.
 """
 
 from pathlib import Path
-
 import pandas as pd
 import streamlit as st
 from streamlit_folium import st_folium
-
 from app.components.graficos import bar_ranking, scatter_dimensoes
 from app.components.mapas import choropleth_map
 
 PROCESSED = Path(__file__).resolve().parents[2] / "data" / "processed"
 
-st.set_page_config(page_title="Qualidade Urbana · BH Investment Insights", layout="wide")
+st.set_page_config(
+    page_title="Qualidade Urbana · BH Investment Insights",
+    layout="wide"
+)
 st.title("🌳 Qualidade Urbana")
 st.caption(
     "Distribuição de amenidades públicas por bairro — fator de atração de "

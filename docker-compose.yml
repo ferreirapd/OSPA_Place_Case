@@ -1,12 +1,12 @@
 services:
   app:
     build: .
-    container_name: bh-investment-insights
+    container_name: ospa_place_case
     ports:
       - "8501:8501"
     volumes:
-      - ./data:/app/data        # persists raw and processed data locally
+      - ./data:/app/data        # Mantém dos dados crus e processados localmente
     environment:
       - PYTHONUNBUFFERED=1
-      - JAVA_TOOL_OPTIONS=-Xmx1g   # caps JVM heap — keeps container lean
+      - JAVA_TOOL_OPTIONS=-Xmx1g   # Configura o heap da JVM — mantém o container leve
     restart: unless-stopped

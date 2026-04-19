@@ -16,6 +16,8 @@ import logging
 import sys
 import time
 from pathlib import Path
+from etl.extract import extract_all
+from etl.transform import acessibilidade, economico, matriz_od, qualidade_urbana, score
 
 logging.basicConfig(
     level=logging.INFO,
@@ -27,16 +29,19 @@ log = logging.getLogger("pipeline")
 # Adiciona a raiz do projeto ao path para imports relativos funcionarem
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from etl.extract import extract_all
-from etl.transform import acessibilidade, economico, matriz_od, qualidade_urbana, score
 
-
-def _step(name: str, fn, *args, **kwargs):
+def _step(
+    name: str,
+    fn,
+    *args,
+    **kwargs
+) -> any:
     """
     Executa uma etapa do pipeline com logging de tempo e tratamento de erro.
 
     :param name: Nome da etapa para exibição no log
     :param fn: Função a executar
+    :return result: Resultado da função executada
     """
     log.info("=" * 60)
     log.info("ETAPA: %s", name)

@@ -3,17 +3,18 @@ Página: Acessibilidade e Mobilidade — índice multimodal por bairro.
 """
 
 from pathlib import Path
-
 import pandas as pd
 import streamlit as st
 from streamlit_folium import st_folium
-
 from app.components.graficos import bar_ranking, scatter_dimensoes
 from app.components.mapas import choropleth_map
 
 PROCESSED = Path(__file__).resolve().parents[2] / "data" / "processed"
 
-st.set_page_config(page_title="Acessibilidade · BH Investment Insights", layout="wide")
+st.set_page_config(
+    page_title="Acessibilidade · BH Investment Insights",
+    layout="wide"
+)
 st.title("🚌 Acessibilidade e Mobilidade")
 st.caption(
     "Análise multimodal combinando transporte público (volume real de passageiros), "

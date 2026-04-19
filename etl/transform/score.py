@@ -17,7 +17,6 @@ Os pesos refletem a lógica de negócio:
 
 import logging
 from pathlib import Path
-
 import pandas as pd
 
 log = logging.getLogger(__name__)
@@ -39,7 +38,10 @@ PESOS = {
 }
 
 
-def _load(path: Path, label: str) -> pd.DataFrame | None:
+def _load(
+    path: Path,
+    label: str
+) -> pd.DataFrame | None:
     """
     Carrega um Parquet processado, retorna None se não existir.
 
@@ -57,15 +59,15 @@ def _load(path: Path, label: str) -> pd.DataFrame | None:
 
 def _min_max(series: pd.Series) -> pd.Series:
     """
-    Normaliza uma série para o intervalo [0, 1] via min-max.
+    Normaliza uma série para o intervalo [0, 100] via min-max.
 
     :param series: Série numérica
     :return: Série normalizada
     """
     mn, mx = series.min(), series.max()
     if mx == mn:
-        return pd.Series(0.5, index=series.index)
-    return (series - mn) / (mx - mn)
+        return pd.Series(50, index=series.index)
+    return (series - mn) / (mx - mn) * 100
 
 
 def run() -> pd.DataFrame:
@@ -149,7 +151,8 @@ def run() -> pd.DataFrame:
     # Score final ponderado (0–100)
     # ------------------------------------------------------------------
     for col in ("score_eco", "score_ace", "score_qua"):
-        score[col] = score[col].fillna(0)
+        media = score[col].mean()
+        score[col] = score[col].fillna(media)
 
     score["score_final"] = (
         PESOS["economico"] * score["score_eco"]
