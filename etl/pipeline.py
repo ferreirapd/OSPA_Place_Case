@@ -17,7 +17,13 @@ import sys
 import time
 from pathlib import Path
 from etl.extract import extract_all
-from etl.transform import acessibilidade, economico, matriz_od, qualidade_urbana, score
+from etl.transform import (
+    acessibilidade,
+    economico,
+    matriz_od,
+    qualidade_urbana,
+    score
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -26,7 +32,7 @@ logging.basicConfig(
 )
 log = logging.getLogger("pipeline")
 
-# Adiciona a raiz do projeto ao path para imports relativos funcionarem
+# Raiz do projeto no path para imports relativos funcionarem
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 
@@ -64,7 +70,7 @@ def run(skip_extract: bool = False) -> None:
     :param skip_extract: Se True, pula a etapa de download
     """
     t_total = time.time()
-    log.info("Pipeline BH Investment Insights — iniciando")
+    log.info("Pipeline OSPA Place Case — iniciando")
 
     if not skip_extract:
         _step("Extract — download das fontes", extract_all)
@@ -85,7 +91,7 @@ def run(skip_extract: bool = False) -> None:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="ETL pipeline — BH Investment Insights")
+    parser = argparse.ArgumentParser(description="ETL pipeline — OSPA Place Case")
     parser.add_argument(
         "--skip-extract",
         action="store_true",

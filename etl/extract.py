@@ -28,8 +28,8 @@ RAW_DIR = Path(__file__).resolve().parents[1] / "data" / "raw"
 CKAN_BASE = "https://dados.pbh.gov.br/api/3/action"
 CKAN_DOWNLOAD = "https://ckan.pbh.gov.br/dataset"
 
-# Headers que simulam um browser — necessários pois o portal bloqueia
-# requisições sem User-Agent (retorna 403 para chamadas de scripts puros)
+# Headers que simulam um browser — portal bloqueia requisições sem User-Agent
+# (retorna 403 para chamadas de scripts puros)
 BROWSER_HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -113,10 +113,6 @@ SOURCES: dict[str, tuple[str, str | None, str | None, str | None, str]] = {
 }
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
 def _get_latest_csv_url(dataset_id: str) -> str | None:
     """
     Consulta a API CKAN com headers de browser e retorna a URL do CSV mais recente.
@@ -189,14 +185,9 @@ def _download(
         return False
 
 
-# ---------------------------------------------------------------------------
-# Interface pública
-# ---------------------------------------------------------------------------
-
 def extract_all(force: bool = False) -> dict[str, Path]:
     """
     Baixa todas as fontes configuradas em SOURCES para data/raw/.
-
     Tenta a API CKAN primeiro; se falhar, usa URL direta de fallback.
     Pula o download se o arquivo já existir, a menos que force=True.
 
