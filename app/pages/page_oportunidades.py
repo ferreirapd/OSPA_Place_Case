@@ -4,13 +4,15 @@ Mapa de Oportunidades: score de atratividade para investimento por bairro.
 
 from pathlib import Path
 import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
 import pandas as pd
 import streamlit as st
+
 from app.components.graficos import bar_ranking, radar_bairro, scatter_dimensoes
 from app.components.footer import render_footer
 
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 PROCESSED = Path(__file__).resolve().parents[2]/"data"/"processed"
 
@@ -25,7 +27,7 @@ def load_score() -> pd.DataFrame | None:
     
     :return: DataFrame com colunas mínimas 'bairro', 'score_final' e 'ranking', ou None se o arquivo não existir
     """
-    path = PROCESSED / "score_final.parquet"
+    path = PROCESSED/"score_final.parquet"
     return pd.read_parquet(path) if path.exists() else None
 
 
@@ -144,8 +146,8 @@ with col_metricas:
 
     st.markdown("---")
     m4, m5, m6 = st.columns(3)
-    v_emp  = row.get("total_empresas")
-    v_emb  = row.get("total_embarques_dia")
+    v_emp = row.get("total_empresas")
+    v_emb = row.get("total_embarques_dia")
     v_parq = row.get("total_parques")
     m4.metric("Empresas ativas", f"{int(v_emp):,}" if pd.notna(v_emp) else "-")
     m5.metric("Embarques/dia", f"{int(v_emb):,}" if pd.notna(v_emb) else "-")

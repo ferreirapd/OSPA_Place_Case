@@ -4,13 +4,15 @@ Infraestrutura e Mobilidade: acessibilidade e qualidade urbana por bairro.
 
 from pathlib import Path
 import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
 import pandas as pd
 import streamlit as st
+
 from app.components.graficos import bar_ranking, scatter_dimensoes
 from app.components.footer import render_footer
 
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 PROCESSED = Path(__file__).resolve().parents[2]/"data"/"processed"
 

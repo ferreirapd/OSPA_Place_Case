@@ -4,11 +4,13 @@ Visão Técnica: pipeline, arquitetura e próximos passos.
 
 from pathlib import Path
 import sys
-import streamlit as st
-from app.components.footer import render_footer
-
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+import streamlit as st
+
+from app.components.footer import render_footer
+
 
 ETL_DIR = Path(__file__).resolve().parents[2]/"etl"
 
