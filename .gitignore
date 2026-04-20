@@ -7,7 +7,6 @@ __pycache__/
 
 # Data — raw files are not versioned (too large)
 data/raw/
-data/processed/
 
 # Jupyter
 .ipynb_checkpoints/
