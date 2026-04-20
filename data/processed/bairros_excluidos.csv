@@ -1,0 +1,209 @@
+etapa,fonte,bairro_raw,motivo
+acessibilidade,acidentes,ADALBERTO FERRAZ,score_baixo
+acessibilidade,acidentes,ADELIA,score_baixo
+acessibilidade,acidentes,ADELINA,score_baixo
+acessibilidade,acidentes,AFONSO PENA,score_baixo
+acessibilidade,acidentes,ALVINA,score_baixo
+acessibilidade,acidentes,AMERICO WERNECK,score_baixo
+acessibilidade,acidentes,ANGELICA,score_baixo
+acessibilidade,acidentes,ATLANTIDA,score_baixo
+acessibilidade,acidentes,AUSTIN,score_baixo
+acessibilidade,acidentes,BIAS FORTES,score_baixo
+acessibilidade,acidentes,BOM PASTOR,score_baixo
+acessibilidade,acidentes,BOM SUCESSO,score_baixo
+acessibilidade,acidentes,CAPARAO,score_baixo
+acessibilidade,acidentes,CAVALIERI,score_baixo
+acessibilidade,acidentes,CELESTE IMPERIO,score_baixo
+acessibilidade,acidentes,DAS CASTANHEIRAS,score_baixo
+acessibilidade,acidentes,DAS LARANJEIRAS,score_baixo
+acessibilidade,acidentes,DAS OLIVEIRAS,score_baixo
+acessibilidade,acidentes,DECIMA,score_baixo
+acessibilidade,acidentes,DECIMA PRIMEIRA,score_baixo
+acessibilidade,acidentes,DECIMA QUARTA,score_baixo
+acessibilidade,acidentes,DECIMA SEGUNDA,score_baixo
+acessibilidade,acidentes,DECIMA TERCEIRA,score_baixo
+acessibilidade,acidentes,EDGARD WERNECK,score_baixo
+acessibilidade,acidentes,ESPLENDOR,score_baixo
+acessibilidade,acidentes,FUTURO,score_baixo
+acessibilidade,acidentes,HELENA ANTIPOFF,score_baixo
+acessibilidade,acidentes,INDUSTRIAL MELO VIANA,score_baixo
+acessibilidade,acidentes,JOAO PESSOA,score_baixo
+acessibilidade,acidentes,LIDER,score_baixo
+acessibilidade,acidentes,LIDIA,score_baixo
+acessibilidade,acidentes,MARILENE,score_baixo
+acessibilidade,acidentes,MARINHOS,score_baixo
+acessibilidade,acidentes,MAUA,score_baixo
+acessibilidade,acidentes,MINAS GERAIS,score_baixo
+acessibilidade,acidentes,MONTE CARMELO,score_baixo
+acessibilidade,acidentes,NONA,score_baixo
+acessibilidade,acidentes,NOVA SUICA,score_baixo
+acessibilidade,acidentes,NOVA YORK,score_baixo
+acessibilidade,acidentes,NOVO HORIZONTE,score_baixo
+acessibilidade,acidentes,OITAVA,score_baixo
+acessibilidade,acidentes,PALMITAL,score_baixo
+acessibilidade,acidentes,PARAUNA,score_baixo
+acessibilidade,acidentes,PATROCINIO,score_baixo
+acessibilidade,acidentes,PRESIDENTE JUSCELINO,score_baixo
+acessibilidade,acidentes,PRIMEIRA,score_baixo
+acessibilidade,acidentes,PRIMEIRO DE NOVEMBRO,score_baixo
+acessibilidade,acidentes,PROGRESSO,score_baixo
+acessibilidade,acidentes,QUARTA,score_baixo
+acessibilidade,acidentes,QUINTA,score_baixo
+acessibilidade,acidentes,RESPLENDOR,score_baixo
+acessibilidade,acidentes,RIACHUELO,score_baixo
+acessibilidade,acidentes,SANTA ANA,score_baixo
+acessibilidade,acidentes,SANTOS DUMONT,score_baixo
+acessibilidade,acidentes,SAO DAMIAO,score_baixo
+acessibilidade,acidentes,SAO DOMINGOS,score_baixo
+acessibilidade,acidentes,"SAO JORGE, PRIMEIRA SECAO",score_baixo
+acessibilidade,acidentes,"SAO JORGE, TERCEIRA SECAO",score_baixo
+acessibilidade,acidentes,SAO LEOPOLDO,score_baixo
+acessibilidade,acidentes,SEGUNDA,score_baixo
+acessibilidade,acidentes,SEXTA,score_baixo
+acessibilidade,acidentes,SINIMBU,score_baixo
+acessibilidade,acidentes,TERCEIRA,score_baixo
+acessibilidade,acidentes,URUCUIA,score_baixo
+acessibilidade,acidentes,VARGEM DE TIJUCO,score_baixo
+acessibilidade,pontos_onibus,ADALBERTO FERRAZ,score_baixo
+acessibilidade,pontos_onibus,ADELIA,score_baixo
+acessibilidade,pontos_onibus,ADELINA,score_baixo
+acessibilidade,pontos_onibus,AFONSO PENA,score_baixo
+acessibilidade,pontos_onibus,ALVINA,score_baixo
+acessibilidade,pontos_onibus,AMERICO WERNECK,score_baixo
+acessibilidade,pontos_onibus,ANGELICA,score_baixo
+acessibilidade,pontos_onibus,ANTONIO TORRES,score_baixo
+acessibilidade,pontos_onibus,ATLANTIDA,score_baixo
+acessibilidade,pontos_onibus,AUSTIN,score_baixo
+acessibilidade,pontos_onibus,BIAS FORTES,score_baixo
+acessibilidade,pontos_onibus,BOM SUCESSO,score_baixo
+acessibilidade,pontos_onibus,CAPARAO,score_baixo
+acessibilidade,pontos_onibus,CELESTE IMPERIO,score_baixo
+acessibilidade,pontos_onibus,DAS CASTANHEIRAS,score_baixo
+acessibilidade,pontos_onibus,DAS LARANJEIRAS,score_baixo
+acessibilidade,pontos_onibus,DAS OLIVEIRAS,score_baixo
+acessibilidade,pontos_onibus,DECIMA,score_baixo
+acessibilidade,pontos_onibus,DECIMA PRIMEIRA,score_baixo
+acessibilidade,pontos_onibus,DECIMA QUARTA,score_baixo
+acessibilidade,pontos_onibus,DECIMA SEGUNDA,score_baixo
+acessibilidade,pontos_onibus,DECIMA TERCEIRA,score_baixo
+acessibilidade,pontos_onibus,EDGARD WERNECK,score_baixo
+acessibilidade,pontos_onibus,ESPLENDOR,score_baixo
+acessibilidade,pontos_onibus,FUTURO,score_baixo
+acessibilidade,pontos_onibus,GETULIO VARGAS,score_baixo
+acessibilidade,pontos_onibus,HELENA ANTIPOFF,score_baixo
+acessibilidade,pontos_onibus,INDUSTRIAL MELO VIANA,score_baixo
+acessibilidade,pontos_onibus,ITACOLOMI,score_baixo
+acessibilidade,pontos_onibus,JARDIM PAMPULHA,score_baixo
+acessibilidade,pontos_onibus,JOAO PESSOA,score_baixo
+acessibilidade,pontos_onibus,LIDER,score_baixo
+acessibilidade,pontos_onibus,LIDIA,score_baixo
+acessibilidade,pontos_onibus,MARINHOS,score_baixo
+acessibilidade,pontos_onibus,MAUA,score_baixo
+acessibilidade,pontos_onibus,MINAS GERAIS,score_baixo
+acessibilidade,pontos_onibus,MONTE CARMELO,score_baixo
+acessibilidade,pontos_onibus,NONA,score_baixo
+acessibilidade,pontos_onibus,NOVA SUICA,score_baixo
+acessibilidade,pontos_onibus,NOVA YORK,score_baixo
+acessibilidade,pontos_onibus,NOVO HORIZONTE,score_baixo
+acessibilidade,pontos_onibus,OITAVA,score_baixo
+acessibilidade,pontos_onibus,PALMITAL,score_baixo
+acessibilidade,pontos_onibus,PARAUNA,score_baixo
+acessibilidade,pontos_onibus,PARQUE AVIACAO,score_baixo
+acessibilidade,pontos_onibus,PATROCINIO,score_baixo
+acessibilidade,pontos_onibus,PRESIDENTE JUSCELINO,score_baixo
+acessibilidade,pontos_onibus,PRIMEIRA,score_baixo
+acessibilidade,pontos_onibus,PRIMEIRO DE NOVEMBRO,score_baixo
+acessibilidade,pontos_onibus,PROGRESSO,score_baixo
+acessibilidade,pontos_onibus,QUARTA,score_baixo
+acessibilidade,pontos_onibus,QUINTA,score_baixo
+acessibilidade,pontos_onibus,RESPLENDOR,score_baixo
+acessibilidade,pontos_onibus,RIACHUELO,score_baixo
+acessibilidade,pontos_onibus,SANTA ANA,score_baixo
+acessibilidade,pontos_onibus,SANTO INACIO,score_baixo
+acessibilidade,pontos_onibus,SANTOS DUMONT,score_baixo
+acessibilidade,pontos_onibus,SAO DOMINGOS,score_baixo
+acessibilidade,pontos_onibus,"SAO JORGE, PRIMEIRA SECAO",score_baixo
+acessibilidade,pontos_onibus,"SAO JORGE, SEGUNDA SECAO",score_baixo
+acessibilidade,pontos_onibus,SAO LEOPOLDO,score_baixo
+acessibilidade,pontos_onibus,SEGUNDA,score_baixo
+acessibilidade,pontos_onibus,SEXTA,score_baixo
+acessibilidade,pontos_onibus,SINIMBU,score_baixo
+acessibilidade,pontos_onibus,TABELIAO FERRAZ,score_baixo
+acessibilidade,pontos_onibus,TERCEIRA,score_baixo
+acessibilidade,pontos_onibus,URUCUIA,score_baixo
+acessibilidade,pontos_onibus,VARGEM DE TIJUCO,score_baixo
+acessibilidade,pontos_onibus,XANGRI-LA,score_baixo
+matriz_od,matriz_od,ADALBERTO FERRAZ,score_baixo
+matriz_od,matriz_od,ADELIA,score_baixo
+matriz_od,matriz_od,ADELINA,score_baixo
+matriz_od,matriz_od,AFONSO PENA,score_baixo
+matriz_od,matriz_od,ALVINA,score_baixo
+matriz_od,matriz_od,AMERICO WERNECK,score_baixo
+matriz_od,matriz_od,ANGELICA,score_baixo
+matriz_od,matriz_od,ANTONIO TORRES,score_baixo
+matriz_od,matriz_od,ATLANTIDA,score_baixo
+matriz_od,matriz_od,AUSTIN,score_baixo
+matriz_od,matriz_od,BIAS FORTES,score_baixo
+matriz_od,matriz_od,BOM PASTOR,score_baixo
+matriz_od,matriz_od,BOM SUCESSO,score_baixo
+matriz_od,matriz_od,CAPARAO,score_baixo
+matriz_od,matriz_od,CAVALIERI,score_baixo
+matriz_od,matriz_od,CELESTE IMPERIO,score_baixo
+matriz_od,matriz_od,CRISTO REDENTOR,score_baixo
+matriz_od,matriz_od,DAS CASTANHEIRAS,score_baixo
+matriz_od,matriz_od,DAS LARANJEIRAS,score_baixo
+matriz_od,matriz_od,DAS OLIVEIRAS,score_baixo
+matriz_od,matriz_od,DECIMA,score_baixo
+matriz_od,matriz_od,DECIMA PRIMEIRA,score_baixo
+matriz_od,matriz_od,DECIMA QUARTA,score_baixo
+matriz_od,matriz_od,DECIMA SEGUNDA,score_baixo
+matriz_od,matriz_od,DECIMA TERCEIRA,score_baixo
+matriz_od,matriz_od,EDGARD WERNECK,score_baixo
+matriz_od,matriz_od,ESPLENDOR,score_baixo
+matriz_od,matriz_od,FUTURO,score_baixo
+matriz_od,matriz_od,GETULIO VARGAS,score_baixo
+matriz_od,matriz_od,HELENA ANTIPOFF,score_baixo
+matriz_od,matriz_od,INDUSTRIAL MELO VIANA,score_baixo
+matriz_od,matriz_od,ITACOLOMI,score_baixo
+matriz_od,matriz_od,JARDIM PAMPULHA,score_baixo
+matriz_od,matriz_od,JOAO PESSOA,score_baixo
+matriz_od,matriz_od,LIDER,score_baixo
+matriz_od,matriz_od,LIDIA,score_baixo
+matriz_od,matriz_od,MARILENE,score_baixo
+matriz_od,matriz_od,MARINHOS,score_baixo
+matriz_od,matriz_od,MAUA,score_baixo
+matriz_od,matriz_od,MINAS GERAIS,score_baixo
+matriz_od,matriz_od,MONTE CARMELO,score_baixo
+matriz_od,matriz_od,NONA,score_baixo
+matriz_od,matriz_od,NOVA SUICA,score_baixo
+matriz_od,matriz_od,NOVA YORK,score_baixo
+matriz_od,matriz_od,NOVO HORIZONTE,score_baixo
+matriz_od,matriz_od,OITAVA,score_baixo
+matriz_od,matriz_od,PALMITAL,score_baixo
+matriz_od,matriz_od,PARAUNA,score_baixo
+matriz_od,matriz_od,PARQUE AVIACAO,score_baixo
+matriz_od,matriz_od,PATROCINIO,score_baixo
+matriz_od,matriz_od,PRESIDENTE JUSCELINO,score_baixo
+matriz_od,matriz_od,PRIMEIRA,score_baixo
+matriz_od,matriz_od,PRIMEIRO DE NOVEMBRO,score_baixo
+matriz_od,matriz_od,PROGRESSO,score_baixo
+matriz_od,matriz_od,QUARTA,score_baixo
+matriz_od,matriz_od,QUINTA,score_baixo
+matriz_od,matriz_od,RESPLENDOR,score_baixo
+matriz_od,matriz_od,RIACHUELO,score_baixo
+matriz_od,matriz_od,SANTA ANA,score_baixo
+matriz_od,matriz_od,SANTO INACIO,score_baixo
+matriz_od,matriz_od,SANTOS DUMONT,score_baixo
+matriz_od,matriz_od,SAO DOMINGOS,score_baixo
+matriz_od,matriz_od,"SAO JORGE, PRIMEIRA SECAO",score_baixo
+matriz_od,matriz_od,"SAO JORGE, SEGUNDA SECAO",score_baixo
+matriz_od,matriz_od,"SAO JORGE, TERCEIRA SECAO",score_baixo
+matriz_od,matriz_od,SAO LEOPOLDO,score_baixo
+matriz_od,matriz_od,SEGUNDA,score_baixo
+matriz_od,matriz_od,SEXTA,score_baixo
+matriz_od,matriz_od,SINIMBU,score_baixo
+matriz_od,matriz_od,TABELIAO FERRAZ,score_baixo
+matriz_od,matriz_od,TERCEIRA,score_baixo
+matriz_od,matriz_od,URUCUIA,score_baixo
+matriz_od,matriz_od,VARGEM DE TIJUCO,score_baixo
+matriz_od,matriz_od,XANGRI-LA,score_baixo
