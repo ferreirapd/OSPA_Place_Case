@@ -1,51 +1,21 @@
 """
-Entry point do app Streamlit — BH Investment Insights.
-
-Configura a navegação entre as seções de stakeholders e visão técnica.
+Entry point do app Streamlit — OSPA Place Case.
 """
 
 import streamlit as st
 
 st.set_page_config(
-    page_title="BH Investment Insights",
+    page_title="OSPA Place Case Data Engineer - Pedro Ferreira",
     page_icon="🏙️",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-# ---------------------------------------------------------------------------
-# Sidebar — navegação principal
-# ---------------------------------------------------------------------------
-st.sidebar.title("🏙️ BH Investment Insights")
-st.sidebar.markdown("---")
-
-st.sidebar.markdown("### 📌 Navegação")
-st.sidebar.markdown(
-    """
-**Para Investidores**
-- Visão Geral de BH
-- Análise Setorial
-- Acessibilidade e Mobilidade
-- Qualidade Urbana
-- Mapa de Oportunidades
-
-**Visão Técnica**
-- Arquitetura Atual
-- Pipeline ETL
-- Arquitetura AWS
-- Visão de Futuro
-"""
-)
-
+st.sidebar.title("OSPA Place Case Data Engineer - Pedro Ferreira")
 st.sidebar.markdown("---")
 st.sidebar.caption("Dados: Portal de Dados Abertos da PBH · 2024")
 
-# ---------------------------------------------------------------------------
-# Home page
-# ---------------------------------------------------------------------------
-st.title("🏙️ BH Investment Insights")
-st.subheader("Uma plataforma de dados para orientar investimentos em Belo Horizonte")
-
+st.title("OSPA Place Case Data Engineer - Pedro Ferreira")
 st.markdown("---")
 
 col1, col2 = st.columns([3, 2])
@@ -53,55 +23,47 @@ col1, col2 = st.columns([3, 2])
 with col1:
     st.markdown(
         """
-        ### O Desafio
+        ### O desafio
 
-        Belo Horizonte concentra oportunidades econômicas distribuídas de forma
-        desigual pelo território. Investidores enfrentam dificuldade em identificar
-        **onde investir** — e por quê — sem uma visão integrada do contexto urbano.
+        Belo Horizonte tem 489 bairros, oito bases de dados públicas abertas e
+        nenhuma ferramenta que junte tudo num lugar só para quem quer entender
+        onde investir na cidade.
 
-        ### A Proposta
+        O case proposto pelo OSPA Place pedia exatamente isso: um pipeline de ETL
+        sobre os dados do portal da PBH e uma visualização que transforme esses dados
+        em algo útil para stakeholders.
 
-        Esta plataforma cruza **dados públicos abertos da PBH** para construir um
-        índice de atratividade por bairro, combinando três dimensões:
+        ### O que foi construído
 
-        - 📊 **Atividade Econômica** — densidade e diversidade de empresas ativas
-        - 🚌 **Acessibilidade Multimodal** — fluxo real de pessoas e infraestrutura
-        - 🌳 **Qualidade Urbana** — amenidades e equipamentos públicos
+        O pipeline cruza três dimensões para produzir um score de atratividade por bairro:
+        a atividade econômica registrada pela prefeitura, a infraestrutura e o fluxo
+        real de transporte público, e os equipamentos urbanos de cada região.
+        O app aqui é a camada de visualização em cima desse pipeline.
 
-        ### Como Navegar
+        ### Como navegar
 
-        Use o menu lateral para acessar as análises para **investidores** ou
-        explorar os detalhes técnicos do pipeline de dados na **Visão Técnica**.
+        As três páginas para investidores mostram os dados de ângulos diferentes —
+        de um panorama geral até o perfil detalhado de cada bairro. A página técnica
+        explica as decisões de engenharia por trás do pipeline e como a arquitetura
+        escalaria em produção.
         """
     )
 
 with col2:
     st.info(
         """
-        **📂 Fontes de Dados**
+        **Fontes de dados**
 
         - Atividade Econômica (PBH)
         - Bairros Oficiais (PBH)
         - Pontos de Ônibus (BHTRANS)
         - Embarque por Ponto (BHTRANS)
         - Acidentes de Trânsito (BHTRANS)
-        - Parques Municipais (PBH)
+        - Parques Municipais (PBH/FPZ)
         - Equipamentos Esportivos (PBH)
-        - Matriz O-D — amostra (BHTRANS)
+        - Matriz Origem-Destino (BHTRANS)
 
-        Todos disponíveis em
-        [dados.pbh.gov.br](https://dados.pbh.gov.br)
+        Todas disponíveis em [dados.pbh.gov.br](https://dados.pbh.gov.br)
         """,
         icon="🗂️",
-    )
-
-    st.success(
-        """
-        **⚙️ Stack Técnica**
-
-        Python · Pandas · PySpark
-        Streamlit · Plotly · Folium
-        Docker · Parquet
-        """,
-        icon="🛠️",
     )

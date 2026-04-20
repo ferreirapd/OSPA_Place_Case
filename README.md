@@ -1,50 +1,62 @@
-# 🏙️ OSPA Place Data Engineer Case - Pedro Ferreira
+# OSPA Place Case - Pedro Ferreira
 
-Plataforma de dados para orientar decisões de investimento em Belo Horizonte,
-construída sobre dados públicos do [Portal de Dados Abertos da PBH](https://dados.pbh.gov.br).
+Pipeline de dados e plataforma de visualização para orientar decisões de investimento em Belo Horizonte, construída sobre dados públicos do [Portal de Dados Abertos da PBH](https://dados.pbh.gov.br).
 
 ---
 
-## Sobre o Projeto
+## O que o projeto faz
 
-O projeto cruza **8 bases de dados públicas** para construir um índice de atratividade
-por bairro com três dimensões:
+O pipeline cruza oito bases públicas da PBH e da BHTRANS para produzir um score de atratividade por bairro em três dimensões: atividade econômica, acessibilidade e qualidade urbana. O app Streamlit é a camada de visualização em cima desse pipeline.
 
 | Dimensão | Peso | Fontes |
 |---|---|---|
-| 📊 Atividade Econômica | 40% | Atividade Econômica (CNAE/PBH) |
-| 🚌 Acessibilidade Multimodal | 35% | Pontos de Ônibus, Embarques por Ponto, Acidentes de Trânsito, Matriz O-D |
-| 🌳 Qualidade Urbana | 25% | Parques Municipais, Equipamentos Esportivos |
+| Atividade Econômica | 40% | Atividade Econômica (CNAE/PBH) |
+| Acessibilidade Multimodal | 35% | Pontos de Ônibus, Embarques por Ponto, Acidentes, Matriz O-D |
+| Qualidade Urbana | 25% | Parques Municipais, Equipamentos Esportivos |
 
 ---
 
-## Estrutura do Repositório
+## Estrutura do repositório
 
 ```
 OSPA_Place_Case/
-│
 ├── data/
-│   ├── raw/            # Dados brutos (não versionados)
-│   └── processed/      # Saída do ETL (.parquet)
+│   ├── raw/                        # CSVs brutos — não versionados
+│   └── processed/                  # Parquets de saída
+│       ├── empresas_por_bairro.parquet
+│       ├── acessibilidade_por_bairro.parquet
+│       ├── qualidade_urbana_por_bairro.parquet
+│       ├── matriz_od_agregada.parquet
+│       ├── score_final.parquet
+│       └── bairros_excluidos.csv   # auditoria de bairros descartados no ETL
 │
 ├── etl/
-│   ├── extract.py      # Download via API CKAN
-│   ├── pipeline.py     # Orquestrador
+│   ├── extract.py                  # download via API CKAN
+│   ├── pipeline.py                 # orquestrador
 │   └── transform/
-│       ├── economico.py
-│       ├── acessibilidade.py
-│       ├── qualidade_urbana.py
-│       ├── matriz_od.py    # PySpark
-│       └── score.py
+│       ├── _io.py                  # helpers: leitura de CSV, normalização, fuzzy match
+│       ├── _spatial.py             # helpers: spatial join GeoPandas reutilizável
+│       ├── economico.py            # Pandas
+│       ├── acessibilidade.py       # Pandas + GeoPandas
+│       ├── qualidade_urbana.py     # Pandas
+│       ├── matriz_od.py            # PySpark
+│       └── score.py                # composição final ponderada
 │
 ├── app/
-│   ├── main.py         # Entry point Streamlit
-│   ├── components/     # Folium + Plotly reutilizáveis
-│   └── pages/          # 9 páginas (5 investidores + 4 técnicas)
+│   ├── main.py                     # entry point Streamlit
+│   ├── components/
+│   │   ├── graficos.py             # componentes Plotly reutilizáveis
+│   │   └── mapas.py                # componentes Folium reutilizáveis
+│   └── pages/
+│       ├── 01_panorama_economico.py
+│       ├── 02_infraestrutura_mobilidade.py
+│       ├── 03_oportunidades.py
+│       └── 04_visao_tecnica.py
 │
 ├── notebooks/
-│   └── exploratory.ipynb
+│   └── exploratory_analysis.ipynb
 │
+├── validate_etl.py                 # validação dos parquets gerados pelo pipeline
 ├── Dockerfile
 ├── docker-compose.yml
 └── requirements.txt
@@ -59,7 +71,7 @@ OSPA_Place_Case/
 
 ---
 
-## Início Rápido
+## Como rodar
 
 ### 1. Clone o repositório
 
@@ -68,14 +80,14 @@ git clone https://github.com/ferreirapd/OSPA_Place_Case.git
 cd OSPA_Place_Case
 ```
 
-### 2. Build da imagem Docker
+### 2. Build da imagem
 
 ```bash
 docker-compose build
 ```
 
-> A primeira build demora ~3–5 minutos (instala Java + dependências Python).
-> Builds subsequentes usam cache e levam ~30 segundos.
+A primeira build demora ~3–5 minutos (instala Java + dependências Python).
+Builds subsequentes usam cache e levam ~30 segundos.
 
 ### 3. Execute o pipeline ETL
 
@@ -83,17 +95,19 @@ docker-compose build
 docker-compose run app python -m etl.pipeline
 ```
 
-Isso irá:
-1. Baixar todas as fontes do portal da PBH para `data/raw/`
-2. Processar cada dimensão e salvar em `data/processed/`
-3. Calcular o score final por bairro
+Para pular o download se os dados já estiverem em `data/raw/`:
 
-> Para pular o download (se já tiver os dados em `data/raw/`):
-> ```bash
-> docker-compose run app python -m etl.pipeline --skip-extract
-> ```
+```bash
+docker-compose run app python -m etl.pipeline --skip-extract
+```
 
-### 4. Suba o app
+### 4. Valide os dados gerados
+
+```bash
+docker-compose run app python validate_etl.py
+```
+
+### 5. Suba o app
 
 ```bash
 docker-compose up
@@ -103,45 +117,32 @@ Acesse: **http://localhost:8501**
 
 ---
 
-## Navegação do App
+## Navegação do app
 
-### Para Investidores
-| Página | Descrição |
+| Página | Conteúdo |
 |---|---|
-| Visão Geral | KPIs macro + mapa de densidade econômica |
-| Análise Setorial | Distribuição de CNAEs por bairro com filtros |
-| Acessibilidade | Índice multimodal + scatter infraestrutura × demanda |
-| Qualidade Urbana | Parques e equipamentos + cruzamento com atividade econômica |
-| Mapa de Oportunidades | Score final + ranking + perfil radar por bairro |
-
-### Visão Técnica
-| Página | Descrição |
-|---|---|
-| Arquitetura Atual | Fluxo de dados local + decisões de design |
-| Pipeline ETL | Diagrama por etapa + código-fonte expansível |
-| Arquitetura AWS | Como escalaria em produção com estimativa de custo |
-| Visão de Futuro | Roadmap de novas fontes + parceiros privados + ML |
+| Panorama Econômico | KPIs, ranking de bairros, distribuição setorial |
+| Infraestrutura e Mobilidade | Transporte público, fluxo de passageiros, parques, equipamentos |
+| Mapa de Oportunidades | Score final, quadrante estratégico, perfil detalhado por bairro |
+| Visão Técnica | Pipeline ETL, código-fonte, arquitetura AWS, próximos passos |
 
 ---
 
-## Stack Técnica
+## Stack técnica
 
 | Camada | Tecnologia |
 |---|---|
-| Linguagem | Python 3.11 |
-| ETL (geral) | Pandas 2.2, PyArrow |
+| ETL (geral) | Python 3.11 · Pandas 2.2 · GeoPandas · rapidfuzz |
 | ETL (Matriz O-D) | PySpark 3.5 |
 | Extração | Requests (API CKAN) |
-| Visualização | Plotly, Folium, streamlit-folium |
+| Visualização | Plotly · Folium · streamlit-folium |
 | App | Streamlit 1.35 |
-| Container | Docker (python:3.11-slim + OpenJDK 17 JRE) |
-| Formato intermediário | Parquet (Snappy) |
+| Formato intermediário | Parquet (PyArrow) |
+| Container | Docker — python:3.11-slim + OpenJDK 21 JRE |
 
 ---
 
-## Dados Utilizados
-
-Todas as fontes são públicas e disponíveis em [dados.pbh.gov.br](https://dados.pbh.gov.br):
+## Dados utilizados
 
 | Dataset | Organização | Periodicidade |
 |---|---|---|
@@ -153,18 +154,6 @@ Todas as fontes são públicas e disponíveis em [dados.pbh.gov.br](https://dado
 | Parques Municipais | PBH/FPZ | Mensal |
 | Equipamentos Esportivos | PBH | Mensal |
 | Matriz Origem-Destino | BHTRANS | Mensal (amostra: 1 mês) |
-
----
-
-## Observações sobre os Dados
-
-- Os nomes de colunas nos CSVs do portal podem variar entre versões.
-  Os módulos de transformação incluem fallbacks de encoding e normalização de nomes.
-- A Matriz O-D usa hexágonos H3 como unidade espacial — o módulo PySpark
-  realiza a conversão para bairros via join aproximado por centroide.
-- O GeoJSON de polígonos de bairros para os mapas coropléticos deve ser
-  obtido separadamente via [BHMAP](https://bhmap.pbh.gov.br) e salvo
-  em `data/raw/bairros/bairros.geojson`.
 
 ---
 
