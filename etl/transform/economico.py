@@ -1,25 +1,17 @@
 """
 Transformação da base de Atividade Econômica da PBH.
 
-Lê o CSV bruto, filtra empresas com alvará ativo (proxy de "empresa ativa"),
-extrai divisão CNAE e agrega métricas por bairro canonizado:
-- total de empresas
-- diversidade de setores (CNAE divisão)
-- setor_dominante (código CNAE 2 dígitos)
-- setor_dominante_nome (descrição do setor)
-
-Notas sobre o dataset PBH:
-- A coluna SITUACAO NÃO existe no CSV — a versão anterior desse módulo
-  tentava filtrar por ela silenciosamente sem efeito. Agora usa
-  IND_POSSUI_ALVARA='S' como proxy oficial de empresa ativa.
-- Este módulo também serve de fonte canônica de nomes de bairro para o
-  restante do pipeline (coluna NOME_BAIRRO com ~425 nomes populares).
+Filtra empresas com alvará ativo, extrai divisão CNAE e agrega por bairro:
+- total_empresas
+- diversidade_setores
+- setor_dominante (código) + setor_dominante_nome (descrição)
 """
 
 import logging
 from pathlib import Path
 import pandas as pd
 from etl.transform._io import (
+    EXCLUSOES,
     find_column,
     load_bairros_canonicos,
     load_csv,
@@ -32,13 +24,17 @@ BASE = Path(__file__).resolve().parents[2] / "data"
 RAW_PATH = BASE / "raw" / "atividade_economica" / "atividade_economica.csv"
 OUT_PATH = BASE / "processed" / "empresas_por_bairro.parquet"
 
-COL_CANDIDATES_BAIRRO   = ("NOME_BAIRRO_POPULAR", "NOME_BAIRRO", "BAIRRO")
-COL_CANDIDATES_CNAE     = ("CNAE_PRINCIPAL", "CNAE", "COD_CNAE", "CNAE_FISCAL")
-COL_CANDIDATES_ALVARA   = ("IND_POSSUI_ALVARA", "POSSUI_ALVARA", "ALVARA")
-COL_CANDIDATES_DATA     = ("DATA_INICIO_ATIVIDADE", "DATA_ABERTURA", "INICIO_ATIVIDADE")
+ETAPA = "economico"
+FONTE = "atividade_economica"
+
+COL_CANDIDATES_BAIRRO = ("NOME_BAIRRO_POPULAR", "NOME_BAIRRO", "BAIRRO")
+COL_CANDIDATES_CNAE   = ("CNAE_PRINCIPAL", "CNAE", "COD_CNAE", "CNAE_FISCAL")
+COL_CANDIDATES_ALVARA = ("IND_POSSUI_ALVARA", "POSSUI_ALVARA", "ALVARA")
+COL_CANDIDATES_DATA   = ("DATA_INICIO_ATIVIDADE", "DATA_ABERTURA", "INICIO_ATIVIDADE")
 
 ALVARA_ATIVO_VALUES = ("S", "SIM", "1", "Y", "YES")
 
+# Mapeamento CNAE divisão (2 dígitos) → nome macro do setor. Fonte: IBGE CNAE 2.3.
 CNAE_LABELS: dict[str, str] = {
     "01": "Agricultura", "05": "Mineração", "10": "Alimentos",
     "13": "Têxtil", "19": "Combustíveis", "22": "Borracha/Plástico",
@@ -59,56 +55,64 @@ CNAE_LABELS: dict[str, str] = {
 }
 
 
-def _clean(
-    df: pd.DataFrame,
-    canonicos: list[str]
-) -> pd.DataFrame:
+def _filtrar_ativos(df: pd.DataFrame, col_alvara: str | None) -> pd.DataFrame:
+    """
+    Filtra apenas empresas com alvará ativo.
+
+    :param df: DataFrame bruto
+    :param col_alvara: Nome da coluna de alvará (None se ausente)
+    :return: DataFrame filtrado; retorna df original se coluna ausente
+    """
+    if col_alvara is None:
+        log.warning("Coluna de alvará ausente — total inclui empresas inativas")
+        return df
+
+    n_antes = len(df)
+    mask = (
+        df[col_alvara].fillna("").astype(str).str.strip().str.upper()
+        .isin(ALVARA_ATIVO_VALUES)
+    )
+    df = df[mask].copy()
+    log.info(
+        "Filtro alvará ativo: %d -> %d linhas (%.1f%% ativas)",
+        n_antes, len(df), len(df) / n_antes * 100 if n_antes else 0,
+    )
+    return df
+
+
+def _clean(df: pd.DataFrame, canonicos: list[str]) -> pd.DataFrame:
     """
     Filtra, normaliza e padroniza o DataFrame bruto de atividade econômica.
 
     :param df: DataFrame bruto com colunas em MAIÚSCULAS
-    :param canonicos: Lista de bairros canônicos para o fuzzy match
-    :return: DataFrame filtrado com colunas BAIRRO_CANON e CNAE_DIVISAO
-    :raises ValueError: Se não encontrar coluna de bairro
+    :param canonicos: Lista de bairros canônicos
+    :return: DataFrame com BAIRRO_CANON e CNAE_DIVISAO
+    :raises ValueError: Se coluna de bairro não for encontrada
     """
-    col_bairro  = find_column(df, *COL_CANDIDATES_BAIRRO)
-    col_cnae    = find_column(df, *COL_CANDIDATES_CNAE)
-    col_alvara  = find_column(df, *COL_CANDIDATES_ALVARA)
-    col_data    = find_column(df, *COL_CANDIDATES_DATA)
+    col_bairro = find_column(df, *COL_CANDIDATES_BAIRRO)
+    col_cnae   = find_column(df, *COL_CANDIDATES_CNAE)
+    col_alvara = find_column(df, *COL_CANDIDATES_ALVARA)
+    col_data   = find_column(df, *COL_CANDIDATES_DATA)
 
     if col_bairro is None:
         raise ValueError(
             f"Coluna de bairro não encontrada. Esperado: {COL_CANDIDATES_BAIRRO}. "
             f"Disponíveis: {list(df.columns)[:20]}"
         )
-
     log.info(
-        "Colunas: bairro='%s' | cnae='%s' | alvara='%s' | data='%s'",
+        "Colunas detectadas: bairro=%s, cnae=%s, alvara=%s, data=%s",
         col_bairro, col_cnae, col_alvara, col_data,
     )
 
-    if col_alvara:
-        n_antes = len(df)
-        mask = (
-            df[col_alvara].fillna("").astype(str).str.strip().str.upper()
-            .isin(ALVARA_ATIVO_VALUES)
-        )
-        df = df[mask].copy()
-        log.info(
-            "Filtro alvará ativo: %d → %d linhas (%.1f%% ativas)",
-            n_antes, len(df), len(df) / n_antes * 100 if n_antes else 0,
-        )
-    else:
-        log.warning(
-            "Coluna de alvará não encontrada — total inclui empresas baixadas/inativas. "
-            "Candidatos testados: %s", COL_CANDIDATES_ALVARA,
-        )
-
+    df = _filtrar_ativos(df, col_alvara)
     df = df.copy()
-    df["BAIRRO_CANON"] = match_bairro_canonico(df[col_bairro], canonicos)
+    df["BAIRRO_CANON"] = match_bairro_canonico(
+        df[col_bairro], canonicos, etapa=ETAPA, fonte=FONTE,
+    )
+
     n_sem = df["BAIRRO_CANON"].isna().sum()
     if n_sem:
-        log.warning("%d registros sem bairro canônico — descartados", n_sem)
+        log.warning("%d empresas sem bairro canônico — descartadas", n_sem)
     df = df[df["BAIRRO_CANON"].notna()].copy()
 
     if col_cnae:
@@ -163,18 +167,16 @@ def run() -> pd.DataFrame:
     """
     Executa a transformação completa da base de atividade econômica.
 
-    :return: DataFrame agregado por bairro, também persistido em data/processed/
+    :return: DataFrame agregado por bairro, persistido em data/processed/
     """
-    log.info("Iniciando transformação: atividade econômica")
-    # A própria atividade econômica é a fonte canônica de nomes de bairro
+    log.info("Iniciando transformação: %s", ETAPA)
     canonicos = load_bairros_canonicos(RAW_PATH)
-    df_raw = load_csv(RAW_PATH, "atividade_economica")
-    df_clean = _clean(df_raw, canonicos)
+    df_clean = _clean(load_csv(RAW_PATH, FONTE), canonicos)
     df_agg = _aggregate(df_clean)
 
     OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     df_agg.to_parquet(OUT_PATH, index=False)
-    log.info("✓ empresas_por_bairro.parquet salvo: %d bairros", len(df_agg))
+    log.info("Salvo: %s (%d bairros)", OUT_PATH.name, len(df_agg))
     return df_agg
 
 

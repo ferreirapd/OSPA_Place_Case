@@ -1,14 +1,15 @@
 """
 Orquestrador do pipeline ETL completo.
 
-Executa as etapas em ordem:
-1. Extract  — baixa todas as fontes do portal da PBH
+Etapas:
+1. Extract   — baixa todas as fontes do portal da PBH
 2. Transform — processa cada dimensão (econômica, acessibilidade, qualidade, O-D)
-3. Score    — compõe o score final por bairro
+3. Score     — compõe o score final por bairro
+4. Audit     — persiste lista de bairros excluídos em cada etapa
 
 Uso:
-    python -m etl.pipeline              # extrai + transforma tudo
-    python -m etl.pipeline --skip-extract  # pula download (dados já em raw/)
+    python -m etl.pipeline               # extrai + transforma tudo
+    python -m etl.pipeline --skip-extract  # pula download (dados em raw/)
 """
 
 import argparse
@@ -17,37 +18,30 @@ import sys
 import time
 from pathlib import Path
 from etl.extract import extract_all
-from etl.transform import (
-    acessibilidade,
-    economico,
-    matriz_od,
-    qualidade_urbana,
-    score
-)
+from etl.transform import acessibilidade, economico, matriz_od, qualidade_urbana, score
+from etl.transform._io import save_exclusoes
 
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s — %(message)s",
+    format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
     handlers=[logging.StreamHandler(sys.stdout)],
 )
 log = logging.getLogger("pipeline")
 
-# Raiz do projeto no path para imports relativos funcionarem
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+EXCLUSOES_OUT = (
+    Path(__file__).resolve().parents[1] / "data" / "processed" / "bairros_excluidos.csv"
+)
 
-def _step(
-    name: str,
-    fn,
-    *args,
-    **kwargs
-) -> any:
+
+def _step(name: str, fn, *args, **kwargs):
     """
-    Executa uma etapa do pipeline com logging de tempo e tratamento de erro.
+    Executa uma etapa do pipeline com logging de tempo e erro.
 
     :param name: Nome da etapa para exibição no log
     :param fn: Função a executar
-    :return result: Resultado da função executada
+    :return: Resultado da função executada
     """
     log.info("=" * 60)
     log.info("ETAPA: %s", name)
@@ -55,11 +49,10 @@ def _step(
     t0 = time.time()
     try:
         result = fn(*args, **kwargs)
-        elapsed = time.time() - t0
-        log.info("✓ '%s' concluída em %.1fs", name, elapsed)
+        log.info("Concluída: %s (%.1fs)", name, time.time() - t0)
         return result
     except Exception as exc:
-        log.error("✗ Falha em '%s': %s", name, exc, exc_info=True)
+        log.error("Falha em %s: %s", name, exc, exc_info=True)
         raise
 
 
@@ -69,29 +62,29 @@ def run(skip_extract: bool = False) -> None:
 
     :param skip_extract: Se True, pula a etapa de download
     """
-    t_total = time.time()
-    log.info("Pipeline OSPA Place Case — iniciando")
+    t0 = time.time()
+    log.info("Pipeline OSPA Place Case - iniciando")
 
     if not skip_extract:
-        _step("Extract — download das fontes", extract_all)
+        _step("Extract - download das fontes", extract_all)
     else:
         log.info("Extract pulada (--skip-extract)")
 
-    _step("Transform — Atividade Econômica", economico.run)
-    _step("Transform — Acessibilidade Multimodal", acessibilidade.run)
-    _step("Transform — Qualidade Urbana", qualidade_urbana.run)
-    _step("Transform — Matriz O-D (PySpark)", matriz_od.run)
-    _step("Compose — Score Final", score.run)
+    _step("Transform - Atividade Econômica",       economico.run)
+    _step("Transform - Acessibilidade Multimodal", acessibilidade.run)
+    _step("Transform - Qualidade Urbana",          qualidade_urbana.run)
+    _step("Transform - Matriz O-D (PySpark)",      matriz_od.run)
+    _step("Compose - Score Final",                 score.run)
+    _step("Audit - Exclusões",                     save_exclusoes, EXCLUSOES_OUT)
 
-    elapsed_total = time.time() - t_total
     log.info("=" * 60)
-    log.info("Pipeline concluído em %.1fs", elapsed_total)
+    log.info("Pipeline concluído em %.1fs", time.time() - t0)
     log.info("Saídas em: data/processed/")
     log.info("=" * 60)
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="ETL pipeline — OSPA Place Case")
+    parser = argparse.ArgumentParser(description="ETL pipeline - OSPA Place Case")
     parser.add_argument(
         "--skip-extract",
         action="store_true",

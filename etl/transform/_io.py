@@ -1,25 +1,16 @@
 """
 Utilitários compartilhados pelos módulos de transformação.
 
-Centraliza:
-- Leitura de CSVs brutos do portal da PBH (encoding e separador variáveis)
-- Normalização textual de nomes de bairro (upper, sem acento)
-- Padronização contra a tabela canônica de nomes populares
-- Spatial join genérico pontos × polígonos de bairros
-
-Sobre a fonte canônica:
-  O bairros.csv da PBH tem colunas ID_BAC, CODIGO, TIPO, NOME, AREA_KM2,
-  PERIMETR_M, GEOMETRIA. A coluna NOME contém subdivisões administrativas
-  internas ("Primeira", "Sexta", "Do Castelo") — não nomes populares.
-  Usar ela como canônico faz "SAVASSI", "CENTRO" e "LOURDES" desaparecerem.
-
-  A fonte correta é atividade_economica.csv / coluna NOME_BAIRRO, que
-  contém os nomes populares usados no cotidiano de BH. A função
-  load_bairros_canonicos() recebe o path desse arquivo.
+Responsabilidades:
+- Leitura de CSVs brutos da PBH (encoding e separador variáveis)
+- Normalização textual de nomes de bairro
+- Padronização contra tabela canônica via fuzzy match
+- Registry de exclusões (bairros descartados em cada etapa)
 """
 
 import csv
 import logging
+from dataclasses import dataclass, field
 from pathlib import Path
 import pandas as pd
 
@@ -28,54 +19,116 @@ log = logging.getLogger(__name__)
 ENCODINGS = ("utf-8", "utf-8-sig", "latin-1", "cp1252")
 SEPARATORS = (",", ";", "\t", "|")
 
+# Sistema de referência oficial dos dados geoespaciais da PBH
 EPSG_PBH = 31983
 
-# Score mínimo (0-100) aceito no fuzzy match.
-# 88 rejeita falsos-positivos tipo SANTA EFIGENIA × SANTA MONICA
-# mas aceita variações legítimas tipo SAO JUDAS × SAO JUDAS TADEU.
+# Score mínimo (0-100) aceito no fuzzy match contra a tabela canônica.
+# 88 rejeita falsos-positivos (SANTA EFIGENIA x SANTA MONICA) mas
+# aceita variações legítimas (SAO JUDAS x SAO JUDAS TADEU).
 FUZZY_SCORE_CUTOFF = 88
 
-# Candidatos a coluna de nome popular de bairro, em ordem de preferência.
-# NOME_BAIRRO (atividade econômica) tem nomes como "SAVASSI", "CENTRO".
-# NÃO usar bairros.csv/NOME — contém subdivisões internas, não nomes populares.
+# Fonte canônica: NOME_BAIRRO de atividade_economica.csv tem ~489 nomes
+# populares ("SAVASSI", "CENTRO"). NÃO usar bairros.csv/NOME — contém
+# subdivisões administrativas ("Primeira", "Sexta"), não nomes populares.
 BAIRROS_CANONICOS_CANDIDATOS = ("NOME_BAIRRO", "NOME_BAIRRO_POPULAR", "BAIRRO")
 
 
-def _detect_separator(
-    path: Path,
-    encoding: str
-) -> str:
-    """
-    Detecta o separador do CSV lendo a primeira linha com Sniffer.
+# ── Registry de exclusões ──────────────────────────────────────────────────
 
-    :param path: Caminho para o arquivo CSV
-    :param encoding: Encoding já validado do arquivo
+@dataclass
+class ExclusaoRegistry:
+    """Acumula bairros excluídos ao longo do pipeline para auditoria."""
+
+    records: list[dict] = field(default_factory=list)
+
+    def add(
+        self,
+        etapa: str,
+        fonte: str,
+        bairro_raw: str,
+        motivo: str
+    ) -> None:
+        """
+        Registra uma exclusão de bairro.
+
+        :param etapa: Nome da etapa do ETL (ex: 'acessibilidade')
+        :param fonte: Nome do dataset de origem (ex: 'pontos_onibus')
+        :param bairro_raw: Valor bruto que não foi mapeado
+        :param motivo: Categoria da exclusão (ex: 'score_baixo', 'sem_sjoin')
+        """
+        self.records.append({
+            "etapa": etapa,
+            "fonte": fonte,
+            "bairro_raw": str(bairro_raw),
+            "motivo": motivo,
+        })
+
+    def add_many(
+        self,
+        etapa: str,
+        fonte: str,
+        bairros: list[str] | set[str],
+        motivo: str
+    ) -> None:
+        """
+        Registra múltiplas exclusões de uma vez.
+
+        :param etapa: Nome da etapa do ETL
+        :param fonte: Nome do dataset de origem
+        :param bairros: Iterável com os valores descartados
+        :param motivo: Categoria da exclusão
+        """
+        for b in bairros:
+            self.add(etapa, fonte, b, motivo)
+
+    def reset(self) -> None:
+        """Limpa todos os registros acumulados."""
+        self.records.clear()
+
+    def to_frame(self) -> pd.DataFrame:
+        """
+        Consolida as exclusões em um DataFrame deduplicado.
+
+        :return: DataFrame ordenado por etapa, fonte, motivo
+        """
+        if not self.records:
+            return pd.DataFrame(columns=["etapa", "fonte", "bairro_raw", "motivo"])
+        df = pd.DataFrame(self.records).drop_duplicates()
+        return df.sort_values(["etapa", "fonte", "motivo", "bairro_raw"]).reset_index(drop=True)
+
+
+# Instância global — compartilhada por todos os módulos do ETL
+EXCLUSOES = ExclusaoRegistry()
+
+
+# ── Leitura de CSV ─────────────────────────────────────────────────────────
+
+def _detect_separator(path: Path, encoding: str) -> str:
+    """
+    Detecta o separador do CSV com Sniffer, com fallback por contagem.
+
+    :param path: Caminho para o CSV
+    :param encoding: Encoding já validado
     :return: Caractere separador detectado
     """
     with open(path, "r", encoding=encoding) as f:
         sample = f.read(8192)
     try:
-        dialect = csv.Sniffer().sniff(sample, delimiters="".join(SEPARATORS))
-        return dialect.delimiter
+        return csv.Sniffer().sniff(sample, delimiters="".join(SEPARATORS)).delimiter
     except csv.Error:
         first_line = sample.splitlines()[0] if sample else ""
         counts = {sep: first_line.count(sep) for sep in SEPARATORS}
         return max(counts, key=counts.get) if max(counts.values()) > 0 else ","
 
 
-def load_csv(
-    path: Path,
-    label: str = ""
-) -> pd.DataFrame:
+def load_csv(path: Path, label: str = "") -> pd.DataFrame:
     """
-    Carrega um CSV detectando encoding e separador automaticamente.
+    Carrega CSV detectando encoding e separador automaticamente.
 
-    Normaliza nomes de colunas para MAIÚSCULAS sem espaços nas bordas.
-
-    :param path: Caminho para o arquivo CSV
+    :param path: Caminho para o CSV
     :param label: Rótulo opcional para logging
-    :return: DataFrame com colunas normalizadas e valores como string
-    :raises ValueError: Se não conseguir decodificar ou parsear o arquivo
+    :return: DataFrame com colunas em MAIÚSCULAS e valores como string
+    :raises ValueError: Se não conseguir decodificar ou parsear
     """
     last_error: Exception | None = None
     for encoding in ENCODINGS:
@@ -87,21 +140,23 @@ def load_csv(
             )
             df.columns = df.columns.str.strip().str.upper()
             log.info(
-                "'%s' carregado: %d linhas × %d colunas (encoding='%s', sep='%s')",
+                "%s carregado: %d linhas x %d colunas (encoding=%s, sep=%r)",
                 label or path.name, len(df), len(df.columns), encoding, sep,
             )
             return df
         except (UnicodeDecodeError, pd.errors.ParserError) as exc:
             last_error = exc
             continue
-    raise ValueError(f"Falha ao ler CSV '{path}': {last_error}")
+    raise ValueError(f"Falha ao ler CSV {path}: {last_error}")
 
+
+# ── Normalização e match de bairros ────────────────────────────────────────
 
 def normalize_bairro(series: pd.Series) -> pd.Series:
     """
     Normaliza nomes de bairro: strip, upper, remove acentos via NFD.
 
-    :param series: Série com nomes de bairro em qualquer formato
+    :param series: Série com nomes em qualquer formato
     :return: Série normalizada (MAIÚSCULAS ASCII sem acento)
     """
     return (
@@ -115,16 +170,13 @@ def normalize_bairro(series: pd.Series) -> pd.Series:
     )
 
 
-def find_column(
-    df: pd.DataFrame,
-    *candidates: str
-) -> str | None:
+def find_column(df: pd.DataFrame, *candidates: str) -> str | None:
     """
-    Procura a primeira coluna do DataFrame que case com algum candidato.
+    Retorna a primeira coluna do DataFrame que bate com algum candidato.
 
     :param df: DataFrame com colunas já normalizadas
     :param candidates: Nomes possíveis em ordem de preferência
-    :return: Nome da primeira coluna encontrada ou None
+    :return: Nome da coluna encontrada, ou None
     """
     cols_upper = {c.upper(): c for c in df.columns}
     for candidate in candidates:
@@ -137,82 +189,68 @@ def load_bairros_canonicos(eco_csv_path: Path) -> list[str]:
     """
     Carrega a lista canônica de nomes populares de bairros de BH.
 
-    Extrai os nomes únicos da coluna NOME_BAIRRO do CSV de atividade
-    econômica — a fonte mais completa e consistente com os outros datasets.
-    Os nomes retornados já estão normalizados (MAIÚSCULAS, sem acento),
-    no mesmo formato produzido por normalize_bairro().
-
-    Por que NÃO usar bairros.csv como canônico:
-    Esse arquivo contém subdivisões administrativas internas (NOME =
-    "Primeira", "Sexta", "Do Castelo"…). Savassi, Centro e Lourdes
-    simplesmente não existem nele.
+    Extrai de NOME_BAIRRO em atividade_economica.csv — fonte mais completa
+    e consistente que bairros.csv (que só tem subdivisões administrativas).
 
     :param eco_csv_path: Caminho para CSV com coluna NOME_BAIRRO
     :return: Lista ordenada de nomes canônicos únicos já normalizados
     :raises FileNotFoundError: Se o arquivo não existir
-    :raises ValueError: Se nenhuma coluna de nome for encontrada
+    :raises ValueError: Se nenhuma coluna candidata for encontrada
     """
     if not eco_csv_path.exists():
-        raise FileNotFoundError(
-            f"Arquivo de fonte canônica não encontrado: {eco_csv_path}. "
-            "Rode o pipeline de extract primeiro."
-        )
+        raise FileNotFoundError(f"Fonte canônica não encontrada: {eco_csv_path}")
 
     df = load_csv(eco_csv_path, "fonte_canonica")
     col_nome = find_column(df, *BAIRROS_CANONICOS_CANDIDATOS)
-
     if col_nome is None:
         raise ValueError(
-            f"Nenhuma coluna de nome de bairro encontrada em {eco_csv_path}. "
+            f"Nenhuma coluna de nome encontrada em {eco_csv_path.name}. "
             f"Esperado: {BAIRROS_CANONICOS_CANDIDATOS}. "
             f"Disponíveis: {df.columns.tolist()[:15]}"
         )
 
-    nomes_norm = normalize_bairro(df[col_nome])
-    canonicos = sorted(set(nomes_norm[nomes_norm != ""].tolist()))
-
-    log.info(
-        "Tabela canônica: %d nomes únicos (arquivo='%s', coluna='%s')",
-        len(canonicos), eco_csv_path.name, col_nome,
-    )
+    nomes = normalize_bairro(df[col_nome])
+    canonicos = sorted(set(nomes[nomes != ""].tolist()))
+    log.info("Tabela canônica: %d bairros (fonte=%s)", len(canonicos), eco_csv_path.name)
     return canonicos
 
 
 def match_bairro_canonico(
     series: pd.Series,
     canonicos: list[str],
-    score_cutoff: int = FUZZY_SCORE_CUTOFF,
+    etapa: str,
+    fonte: str,
+    score_cutoff: int = FUZZY_SCORE_CUTOFF
 ) -> pd.Series:
     """
-    Mapeia nomes de bairros contra a tabela canônica via fuzzy match.
+    Mapeia nomes contra a tabela canônica via fuzzy match vetorizado.
 
-    Estratégia vetorizada:
-    1. Normaliza a entrada (upper + sem acento)
-    2. Para cada nome único: match exato → se não encontrar, rapidfuzz.WRatio
-    3. Aplica o mapa com Series.map — um único sweep no DataFrame inteiro
+    Para cada nome único: tenta match exato, cai para rapidfuzz.WRatio.
+    Nomes abaixo do cutoff retornam NaN e são registrados em EXCLUSOES.
 
-    Nomes com score < score_cutoff retornam NaN (decisão de descarte fica
-    no chamador).
-
-    :param series: Série com nomes de bairro em qualquer formato
+    :param series: Série com nomes em qualquer formato
     :param canonicos: Lista de nomes canônicos já normalizados
-    :param score_cutoff: Score mínimo aceito (0-100). Default 88
-    :return: Série com nomes canônicos. NaN para os não identificáveis
+    :param etapa: Nome da etapa do ETL (para auditoria em EXCLUSOES)
+    :param fonte: Nome do dataset de origem (para auditoria em EXCLUSOES)
+    :param score_cutoff: Score mínimo aceito (0-100)
+    :return: Série com nomes canônicos; NaN para não identificáveis
     """
     from rapidfuzz import fuzz, process
 
     norm = normalize_bairro(series)
     canonicos_set = set(canonicos)
-    unique_norm = [x for x in norm.dropna().unique() if x != ""]
+    unique_names = [x for x in norm.dropna().unique() if x != ""]
 
     mapping: dict[str, str | None] = {}
-    n_exatos, n_fuzzy, n_sem_match = 0, 0, 0
+    nao_matched: list[str] = []
+    n_exatos = n_fuzzy = 0
 
-    for nome in unique_norm:
+    for nome in unique_names:
         if nome in canonicos_set:
             mapping[nome] = nome
             n_exatos += 1
             continue
+
         melhor = process.extractOne(
             nome, canonicos,
             scorer=fuzz.WRatio,
@@ -223,71 +261,40 @@ def match_bairro_canonico(
             n_fuzzy += 1
         else:
             mapping[nome] = None
-            n_sem_match += 1
+            nao_matched.append(nome)
+
+    if nao_matched:
+        EXCLUSOES.add_many(etapa, fonte, nao_matched, motivo="score_baixo")
 
     log.info(
-        "Fuzzy match: %d exatos | %d aproximados | %d sem match "
-        "(cutoff=%d, total únicos=%d)",
-        n_exatos, n_fuzzy, n_sem_match, score_cutoff, len(unique_norm),
+        "Fuzzy match (%s/%s): %d exatos, %d aproximados, %d sem match (cutoff=%d)",
+        etapa, fonte, n_exatos, n_fuzzy, len(nao_matched), score_cutoff,
     )
     return norm.map(mapping)
 
 
-def spatial_join_to_bairros(
-    df_pontos: pd.DataFrame,
-    df_bairros: pd.DataFrame,
-    col_wkt_pontos: str = "GEOMETRIA",
-    col_wkt_bairros: str = "GEOMETRIA",
-    col_nome_bairro: str = "NOME",
-) -> pd.DataFrame:
+# ── Persistência de exclusões ──────────────────────────────────────────────
+
+def save_exclusoes(out_path: Path) -> pd.DataFrame:
     """
-    Atribui nome de bairro a cada ponto via spatial join GeoPandas.
+    Persiste as exclusões acumuladas em CSV e retorna o DataFrame.
 
-    O nome retornado em 'BAIRRO_SJOIN' vem da coluna col_nome_bairro do
-    bairros.csv — que é o nome administrativo interno. Chamar
-    match_bairro_canonico() no resultado é obrigatório para converter
-    para o nome canônico popular antes de salvar.
-
-    :param df_pontos: DataFrame com geometria WKT
-    :param df_bairros: DataFrame com polígonos WKT e nome do bairro
-    :param col_wkt_pontos: Coluna WKT nos pontos
-    :param col_wkt_bairros: Coluna WKT nos polígonos
-    :param col_nome_bairro: Coluna com o nome do bairro nos polígonos
-    :return: df_pontos enriquecido com coluna 'BAIRRO_SJOIN'
+    :param out_path: Caminho do arquivo CSV de saída
+    :return: DataFrame com as exclusões consolidadas
     """
-    import geopandas as gpd
-    from shapely import wkt
+    df = EXCLUSOES.to_frame()
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    df.to_csv(out_path, index=False, encoding="utf-8")
 
-    gdf_bairros = df_bairros[[col_nome_bairro, col_wkt_bairros]].copy()
-    gdf_bairros["geometry"] = gdf_bairros[col_wkt_bairros].apply(
-        lambda s: wkt.loads(s) if isinstance(s, str) and s.strip() else None
-    )
-    gdf_bairros = gpd.GeoDataFrame(
-        gdf_bairros.dropna(subset=["geometry"]),
-        geometry="geometry",
-        crs=f"EPSG:{EPSG_PBH}",
-    )[[col_nome_bairro, "geometry"]]
+    if df.empty:
+        log.info("Nenhuma exclusão registrada — CSV vazio em %s", out_path)
+        return df
 
-    df_pontos = df_pontos.copy()
-    df_pontos["_geom"] = df_pontos[col_wkt_pontos].apply(
-        lambda s: wkt.loads(s) if isinstance(s, str) and s.strip() else None
+    resumo = (
+        df.groupby(["etapa", "fonte", "motivo"])
+        .size()
+        .reset_index(name="qtd")
     )
-    gdf_pontos = gpd.GeoDataFrame(
-        df_pontos.dropna(subset=["_geom"]),
-        geometry="_geom",
-        crs=f"EPSG:{EPSG_PBH}",
-    )
-
-    joined = gpd.sjoin(
-        gdf_pontos, gdf_bairros,
-        how="left", predicate="within",
-    )
-
-    result = pd.DataFrame(
-        joined.drop(columns=["geometry", "_geom", "index_right"], errors="ignore")
-    )
-    result = result.rename(columns={col_nome_bairro: "BAIRRO_SJOIN"})
-
-    n_matched = result["BAIRRO_SJOIN"].notna().sum()
-    log.info("Spatial join: %d/%d pontos atribuídos a um bairro", n_matched, len(result))
-    return result
+    log.info("Exclusões salvas em %s (%d registros)", out_path, len(df))
+    log.info("Resumo por etapa/fonte/motivo:\n%s", resumo.to_string(index=False))
+    return df
