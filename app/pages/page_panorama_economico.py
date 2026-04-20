@@ -1,48 +1,88 @@
 """
-Panorama Econômico — distribuição de empresas, setores e densidade por bairro.
+Panorama Econômico: distribuição de empresas, setores e densidade por bairro.
 """
 
 from pathlib import Path
 import sys
 import pandas as pd
 import streamlit as st
+from app.components.graficos import bar_ranking, pie_setores
+from app.components.footer import render_footer
+
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from app.components.graficos import bar_ranking, pie_setores
-
-PROCESSED = Path(__file__).resolve().parents[2] / "data" / "processed"
-RAW       = Path(__file__).resolve().parents[2] / "data" / "raw"
-
+PROCESSED = Path(__file__).resolve().parents[2]/"data"/"processed"
+RAW = Path(__file__).resolve().parents[2]/"data"/"raw"
 CNAE_LABELS: dict[str, str] = {
-    "01": "Agricultura", "05": "Mineração", "10": "Alimentos",
-    "13": "Têxtil", "19": "Combustíveis", "22": "Borracha/Plástico",
-    "25": "Metal", "26": "Eletrônicos", "28": "Máquinas",
-    "33": "Manutenção", "35": "Energia", "36": "Saneamento",
-    "41": "Construção", "45": "Veículos", "46": "Com. Atacado",
-    "47": "Com. Varejo", "49": "Transp. Terrestre",
-    "52": "Armazenagem", "55": "Hospedagem", "56": "Alimentação",
-    "58": "Editoras", "61": "Telecom", "62": "TI/Software",
-    "64": "Financeiro", "68": "Imobiliário", "69": "Jurídico",
-    "70": "Consultoria", "71": "Arq./Eng.", "72": "P&D",
-    "73": "Publicidade", "74": "Design", "75": "Veterinário",
-    "77": "Locação", "78": "RH/Seleção", "79": "Turismo",
-    "80": "Segurança", "81": "Facilities", "82": "Adm. Apoio",
-    "84": "Adm. Pública", "85": "Educação",
-    "86": "Saúde", "87": "Assist. Social", "90": "Artes/Cultura",
-    "93": "Esporte/Lazer", "95": "Reparação", "96": "Serv. Pessoais",
+    "01": "Agricultura",
+    "05": "Mineração",
+    "10": "Alimentos",
+    "13": "Têxtil",
+    "19": "Combustíveis",
+    "22": "Borracha/Plástico",
+    "25": "Metal",
+    "26": "Eletrônicos",
+    "28": "Máquinas",
+    "33": "Manutenção",
+    "35": "Energia",
+    "36": "Saneamento",
+    "41": "Construção",
+    "45": "Veículos",
+    "46": "Com. Atacado",
+    "47": "Com. Varejo",
+    "49": "Transp. Terrestre",
+    "52": "Armazenagem",
+    "55": "Hospedagem",
+    "56": "Alimentação",
+    "58": "Editoras",
+    "61": "Telecom",
+    "62": "TI/Software",
+    "64": "Financeiro",
+    "68": "Imobiliário",
+    "69": "Jurídico",
+    "70": "Consultoria",
+    "71": "Arq./Eng.",
+    "72": "P&D",
+    "73": "Publicidade",
+    "74": "Design",
+    "75": "Veterinário",
+    "77": "Locação",
+    "78": "RH/Seleção",
+    "79": "Turismo",
+    "80": "Segurança",
+    "81": "Facilities",
+    "82": "Adm. Apoio",
+    "84": "Adm. Pública",
+    "85": "Educação",
+    "86": "Saúde",
+    "87": "Assist. Social",
+    "90": "Artes/Cultura",
+    "93": "Esporte/Lazer",
+    "95": "Reparação",
+    "96": "Serv. Pessoais",
 }
 
 
 @st.cache_data
 def load_empresas() -> pd.DataFrame | None:
-    path = PROCESSED / "empresas_por_bairro.parquet"
+    """
+    Carrega dados de empresas por bairro, já processados e agregados.
+
+    :return: DataFrame com colunas 'bairro', 'total_empresas', 'diversidade_setores', etc
+    """
+    path = PROCESSED/"empresas_por_bairro.parquet"
     return pd.read_parquet(path) if path.exists() else None
 
 
 @st.cache_data
 def load_raw_eco() -> pd.DataFrame | None:
-    path = RAW / "atividade_economica" / "atividade_economica.csv"
+    """
+    Carrega dados brutos de atividade econômica, sem processamento.
+
+    :return: DataFrame com dados brutos, ou None se o arquivo não existir
+    """ 
+    path = RAW/"atividade_economica"/"atividade_economica.csv"
     if not path.exists():
         return None
     for enc in ("utf-8", "latin-1", "cp1252"):
@@ -93,7 +133,7 @@ with col_left:
     )
 
 with col_right:
-    st.subheader("Distribuição por setor — BH")
+    st.subheader("Distribuição por setor - BH")
     if df_raw is not None:
         if "CNAE_DIVISAO" not in df_raw.columns and "CNAE_PRINCIPAL" in df_raw.columns:
             df_raw["CNAE_DIVISAO"] = df_raw["CNAE_PRINCIPAL"].str[:2]
@@ -119,8 +159,8 @@ st.markdown("---")
 
 st.subheader("Diversidade setorial por bairro")
 st.caption(
-    "Bairros com alta diversidade dependem menos de um único setor — "
-    "indicador de resiliência econômica."
+    "Bairros com alta diversidade dependem menos de um único setor: "
+    "um indicador de resiliência econômica."
 )
 st.plotly_chart(
     bar_ranking(
@@ -145,3 +185,5 @@ with st.expander("Ver tabela completa"):
         .sort_values("Empresas Ativas", ascending=False),
         use_container_width=True, hide_index=True,
     )
+
+render_footer()

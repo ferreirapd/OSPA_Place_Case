@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 import pandas as pd
 
+
 log = logging.getLogger(__name__)
 
 ENCODINGS = ("utf-8", "utf-8-sig", "latin-1", "cp1252")
@@ -28,16 +29,16 @@ EPSG_PBH = 31983
 FUZZY_SCORE_CUTOFF = 88
 
 # Fonte canônica: NOME_BAIRRO de atividade_economica.csv tem ~489 nomes
-# populares ("SAVASSI", "CENTRO"). NÃO usar bairros.csv/NOME — contém
+# populares ("SAVASSI", "CENTRO"). NÃO usar bairros.csv/NOME - contém
 # subdivisões administrativas ("Primeira", "Sexta"), não nomes populares.
 BAIRROS_CANONICOS_CANDIDATOS = ("NOME_BAIRRO", "NOME_BAIRRO_POPULAR", "BAIRRO")
 
 
-# ── Registry de exclusões ──────────────────────────────────────────────────
-
 @dataclass
 class ExclusaoRegistry:
-    """Acumula bairros excluídos ao longo do pipeline para auditoria."""
+    """
+    Acumula bairros excluídos ao longo do pipeline para auditoria.
+    """
 
     records: list[dict] = field(default_factory=list)
 
@@ -82,7 +83,9 @@ class ExclusaoRegistry:
             self.add(etapa, fonte, b, motivo)
 
     def reset(self) -> None:
-        """Limpa todos os registros acumulados."""
+        """
+        Limpa todos os registros acumulados.
+        """
         self.records.clear()
 
     def to_frame(self) -> pd.DataFrame:
@@ -97,13 +100,14 @@ class ExclusaoRegistry:
         return df.sort_values(["etapa", "fonte", "motivo", "bairro_raw"]).reset_index(drop=True)
 
 
-# Instância global — compartilhada por todos os módulos do ETL
+# Instância global - compartilhada por todos os módulos do ETL
 EXCLUSOES = ExclusaoRegistry()
 
 
-# ── Leitura de CSV ─────────────────────────────────────────────────────────
-
-def _detect_separator(path: Path, encoding: str) -> str:
+def _detect_separator(
+    path: Path,
+    encoding: str
+) -> str:
     """
     Detecta o separador do CSV com Sniffer, com fallback por contagem.
 
@@ -121,7 +125,10 @@ def _detect_separator(path: Path, encoding: str) -> str:
         return max(counts, key=counts.get) if max(counts.values()) > 0 else ","
 
 
-def load_csv(path: Path, label: str = "") -> pd.DataFrame:
+def load_csv(
+    path: Path,
+    label: str = ""
+) -> pd.DataFrame:
     """
     Carrega CSV detectando encoding e separador automaticamente.
 
@@ -150,8 +157,6 @@ def load_csv(path: Path, label: str = "") -> pd.DataFrame:
     raise ValueError(f"Falha ao ler CSV {path}: {last_error}")
 
 
-# ── Normalização e match de bairros ────────────────────────────────────────
-
 def normalize_bairro(series: pd.Series) -> pd.Series:
     """
     Normaliza nomes de bairro: strip, upper, remove acentos via NFD.
@@ -170,7 +175,10 @@ def normalize_bairro(series: pd.Series) -> pd.Series:
     )
 
 
-def find_column(df: pd.DataFrame, *candidates: str) -> str | None:
+def find_column(
+    df: pd.DataFrame,
+    *candidates: str
+) -> str | None:
     """
     Retorna a primeira coluna do DataFrame que bate com algum candidato.
 
@@ -188,8 +196,7 @@ def find_column(df: pd.DataFrame, *candidates: str) -> str | None:
 def load_bairros_canonicos(eco_csv_path: Path) -> list[str]:
     """
     Carrega a lista canônica de nomes populares de bairros de BH.
-
-    Extrai de NOME_BAIRRO em atividade_economica.csv — fonte mais completa
+    Extrai de NOME_BAIRRO em atividade_economica.csv - fonte mais completa
     e consistente que bairros.csv (que só tem subdivisões administrativas).
 
     :param eco_csv_path: Caminho para CSV com coluna NOME_BAIRRO
@@ -224,7 +231,6 @@ def match_bairro_canonico(
 ) -> pd.Series:
     """
     Mapeia nomes contra a tabela canônica via fuzzy match vetorizado.
-
     Para cada nome único: tenta match exato, cai para rapidfuzz.WRatio.
     Nomes abaixo do cutoff retornam NaN e são registrados em EXCLUSOES.
 
@@ -273,8 +279,6 @@ def match_bairro_canonico(
     return norm.map(mapping)
 
 
-# ── Persistência de exclusões ──────────────────────────────────────────────
-
 def save_exclusoes(out_path: Path) -> pd.DataFrame:
     """
     Persiste as exclusões acumuladas em CSV e retorna o DataFrame.
@@ -287,7 +291,7 @@ def save_exclusoes(out_path: Path) -> pd.DataFrame:
     df.to_csv(out_path, index=False, encoding="utf-8")
 
     if df.empty:
-        log.info("Nenhuma exclusão registrada — CSV vazio em %s", out_path)
+        log.info("Nenhuma exclusão registrada - CSV vazio em %s", out_path)
         return df
 
     resumo = (

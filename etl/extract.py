@@ -13,6 +13,7 @@ import logging
 from pathlib import Path
 import requests
 
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s"
@@ -23,12 +24,11 @@ log = logging.getLogger(__name__)
 # Configuração
 # ---------------------------------------------------------------------------
 
-RAW_DIR = Path(__file__).resolve().parents[1] / "data" / "raw"
-
+RAW_DIR = Path(__file__).resolve().parents[1]/"data"/"raw"
 CKAN_BASE = "https://dados.pbh.gov.br/api/3/action"
 CKAN_DOWNLOAD = "https://ckan.pbh.gov.br/dataset"
 
-# Headers que simulam um browser — portal bloqueia requisições sem User-Agent
+# Headers que simulam um browser - portal bloqueia requisições sem User-Agent
 # (retorna 403 para chamadas de scripts puros)
 BROWSER_HEADERS = {
     "User-Agent": (
@@ -197,7 +197,7 @@ def extract_all(force: bool = False) -> dict[str, Path]:
     results: dict[str, Path] = {}
 
     for source_name, (dataset_id, d_uuid, r_uuid, fallback_fname, local_fname) in SOURCES.items():
-        dest = RAW_DIR / source_name / local_fname
+        dest = RAW_DIR/source_name/local_fname
 
         if dest.exists() and not force:
             log.info("Já existe, pulando: %s", dest)
@@ -215,7 +215,7 @@ def extract_all(force: bool = False) -> dict[str, Path]:
 
         if not url:
             log.warning(
-                "Nenhuma URL disponível para '%s' — adicione o fallback_uuid manualmente.",
+                "Nenhuma URL disponível para '%s' - adicione o fallback_uuid manualmente.",
                 source_name,
             )
             continue

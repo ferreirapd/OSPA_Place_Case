@@ -12,36 +12,26 @@ Nomes são padronizados contra a tabela canônica de NOME_BAIRRO.
 import logging
 from pathlib import Path
 import pandas as pd
-from etl.transform._io import (
-    find_column,
-    load_bairros_canonicos,
-    load_csv,
-)
-from etl.transform._spatial import (
-    aggregate_por_bairro_canonico,
-    sjoin_pontos_wkt,
-    sjoin_pontos_xy,
-)
+from etl.transform._io import find_column, load_bairros_canonicos, load_csv
+from etl.transform._spatial import aggregate_por_bairro_canonico, sjoin_pontos_wkt, sjoin_pontos_xy
+
 
 log = logging.getLogger(__name__)
 
-BASE = Path(__file__).resolve().parents[2] / "data"
-RAW = BASE / "raw"
-PROCESSED = BASE / "processed"
-
+BASE = Path(__file__).resolve().parents[2]/"data"
+RAW = BASE/"raw"
+PROCESSED = BASE/"processed"
 PATHS = {
-    "pontos":    RAW / "pontos_onibus"       / "pontos_onibus.csv",
-    "embarques": RAW / "embarque_por_ponto"  / "embarque_por_ponto.csv",
-    "acidentes": RAW / "acidentes_transito"  / "acidentes_transito.csv",
-    "bairros":   RAW / "bairros"             / "bairros.csv",
-    "eco":       RAW / "atividade_economica" / "atividade_economica.csv",
+    "pontos": RAW/"pontos_onibus"/"pontos_onibus.csv",
+    "embarques": RAW/"embarque_por_ponto"/"embarque_por_ponto.csv",
+    "acidentes": RAW/"acidentes_transito"/"acidentes_transito.csv",
+    "bairros": RAW/"bairros"/"bairros.csv",
+    "eco": RAW/"atividade_economica"/"atividade_economica.csv",
 }
-OUT_PATH = PROCESSED / "acessibilidade_por_bairro.parquet"
-
+OUT_PATH = PROCESSED/"acessibilidade_por_bairro.parquet"
 ETAPA = "acessibilidade"
-
-COL_CANDIDATES_BAIRRO    = ("NOME_BAIRRO_POPULAR", "NOME_BAIRRO", "NOME", "BAIRRO")
-COL_CANDIDATES_ID_PONTO  = (
+COL_CANDIDATES_BAIRRO = ("NOME_BAIRRO_POPULAR", "NOME_BAIRRO", "NOME", "BAIRRO")
+COL_CANDIDATES_ID_PONTO = (
     "IDENTIFICADOR_PONTO_ONIBUS", "ID_PONTO_ONIBUS_LINHA",
     "SIU", "CODIGO_PONTO", "COD_PONTO", "ID_PONTO", "COD_PONTO_ONIBUS", "PONTO",
 )
@@ -49,7 +39,7 @@ COL_CANDIDATES_EMBARQUES = (
     "TOTAL GERAL", "QTD_EMBARQUES_DU", "QTD_EMBARQUES", "EMBARQUES_DU",
     "EMBARQUES", "TOTAL_EMBARQUES", "NUM_EMBARQUES", "PASSAGEIROS",
 )
-COL_CANDIDATES_GEOM    = ("GEOMETRIA", "GEOM", "WKT")
+COL_CANDIDATES_GEOM = ("GEOMETRIA", "GEOM", "WKT")
 COL_CANDIDATES_COORD_X = ("COORDENADA_X", "X", "COORD_X", "LON", "LONGITUDE")
 COL_CANDIDATES_COORD_Y = ("COORDENADA_Y", "Y", "COORD_Y", "LAT", "LATITUDE")
 
@@ -67,13 +57,13 @@ def _agg_pontos_onibus(
     :param canonicos: Lista de bairros canônicos
     :return: (agregação por bairro, df enriquecido, nome da coluna de ID de ponto)
     """
-    col_geom_pt = find_column(df_pontos,  *COL_CANDIDATES_GEOM)
+    col_geom_pt = find_column(df_pontos, *COL_CANDIDATES_GEOM)
     col_geom_br = find_column(df_bairros, *COL_CANDIDATES_GEOM)
     col_nome_br = find_column(df_bairros, *COL_CANDIDATES_BAIRRO)
-    col_id      = find_column(df_pontos,  *COL_CANDIDATES_ID_PONTO)
+    col_id = find_column(df_pontos, *COL_CANDIDATES_ID_PONTO)
 
     if not all([col_geom_pt, col_geom_br, col_nome_br]):
-        log.warning("Spatial join de pontos impossível — colunas faltando")
+        log.warning("Spatial join de pontos impossível - colunas faltando")
         return pd.DataFrame(columns=["bairro", "total_pontos_onibus"]), df_pontos, col_id
 
     df_sjoin = sjoin_pontos_wkt(
@@ -104,11 +94,11 @@ def _agg_embarques(
     :return: DataFrame com total_embarques_dia por bairro
     """
     col_id_emb = find_column(df_embarques, *COL_CANDIDATES_ID_PONTO)
-    col_qtd    = find_column(df_embarques, *COL_CANDIDATES_EMBARQUES)
+    col_qtd = find_column(df_embarques, *COL_CANDIDATES_EMBARQUES)
 
     if not all([col_id_pontos, col_id_emb, col_qtd]):
         log.warning(
-            "Join embarques abortado — ids=%s/%s, qtd=%s",
+            "Join embarques abortado - ids=%s/%s, qtd=%s",
             col_id_pontos, col_id_emb, col_qtd,
         )
         return pd.DataFrame(columns=["bairro", "total_embarques_dia"])
@@ -145,13 +135,13 @@ def _agg_acidentes(
     :param canonicos: Lista de bairros canônicos
     :return: DataFrame com total_acidentes por bairro canônico
     """
-    col_x       = find_column(df_acidentes, *COL_CANDIDATES_COORD_X)
-    col_y       = find_column(df_acidentes, *COL_CANDIDATES_COORD_Y)
-    col_geom_br = find_column(df_bairros,   *COL_CANDIDATES_GEOM)
-    col_nome_br = find_column(df_bairros,   *COL_CANDIDATES_BAIRRO)
+    col_x = find_column(df_acidentes, *COL_CANDIDATES_COORD_X)
+    col_y = find_column(df_acidentes, *COL_CANDIDATES_COORD_Y)
+    col_geom_br = find_column(df_bairros, *COL_CANDIDATES_GEOM)
+    col_nome_br = find_column(df_bairros, *COL_CANDIDATES_BAIRRO)
 
     if not all([col_x, col_y, col_geom_br, col_nome_br]):
-        log.warning("Spatial join de acidentes impossível — colunas faltando")
+        log.warning("Spatial join de acidentes impossível - colunas faltando")
         return pd.DataFrame(columns=["bairro", "total_acidentes"])
 
     df_sjoin = sjoin_pontos_xy(
@@ -171,7 +161,6 @@ def _agg_acidentes(
 def _compute_index(df: pd.DataFrame) -> pd.DataFrame:
     """
     Calcula índice de acessibilidade (0-1) por bairro.
-
     Pesos: 50% embarques + 30% pontos + 20% inverso de acidentes.
     Acidentes invertidos: mais acidentes -> menor acessibilidade percebida.
 
@@ -183,8 +172,8 @@ def _compute_index(df: pd.DataFrame) -> pd.DataFrame:
             df[col] = 0
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
 
-    rank_pontos        = df["total_pontos_onibus"].rank(pct=True)
-    rank_embarques     = df["total_embarques_dia"].rank(pct=True)
+    rank_pontos = df["total_pontos_onibus"].rank(pct=True)
+    rank_embarques = df["total_embarques_dia"].rank(pct=True)
     rank_acidentes_inv = 1 - df["total_acidentes"].rank(pct=True)
 
     df["indice_acessibilidade"] = (
@@ -201,11 +190,11 @@ def run() -> pd.DataFrame:
     """
     log.info("Iniciando transformação: %s", ETAPA)
 
-    canonicos    = load_bairros_canonicos(PATHS["eco"])
-    df_pontos    = load_csv(PATHS["pontos"],    "pontos_onibus")
+    canonicos = load_bairros_canonicos(PATHS["eco"])
+    df_pontos = load_csv(PATHS["pontos"], "pontos_onibus")
     df_embarques = load_csv(PATHS["embarques"], "embarques")
     df_acidentes = load_csv(PATHS["acidentes"], "acidentes")
-    df_bairros   = load_csv(PATHS["bairros"],   "bairros")
+    df_bairros = load_csv(PATHS["bairros"], "bairros")
 
     agg_pontos, df_enriched, col_id = _agg_pontos_onibus(df_pontos, df_bairros, canonicos)
     agg_embarques = _agg_embarques(df_enriched, df_embarques, col_id)

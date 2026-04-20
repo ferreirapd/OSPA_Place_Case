@@ -1,21 +1,30 @@
 """
-Mapa de Oportunidades — score de atratividade para investimento por bairro.
+Mapa de Oportunidades: score de atratividade para investimento por bairro.
 """
 
 from pathlib import Path
 import sys
 import pandas as pd
 import streamlit as st
+from app.components.graficos import bar_ranking, radar_bairro, scatter_dimensoes
+from app.components.footer import render_footer
+
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from app.components.graficos import bar_ranking, radar_bairro, scatter_dimensoes
-
-PROCESSED = Path(__file__).resolve().parents[2] / "data" / "processed"
+PROCESSED = Path(__file__).resolve().parents[2]/"data"/"processed"
 
 
 @st.cache_data
 def load_score() -> pd.DataFrame | None:
+    """
+    Carrega o score final de atratividade por bairro, resultado do pipeline de
+    ETL. O score é uma combinação ponderada de atividade econômica, acessibilidade
+    e qualidade urbana, e é a principal métrica para identificar oportunidades de
+    investimento.
+    
+    :return: DataFrame com colunas mínimas 'bairro', 'score_final' e 'ranking', ou None se o arquivo não existir
+    """
     path = PROCESSED / "score_final.parquet"
     return pd.read_parquet(path) if path.exists() else None
 
@@ -82,8 +91,8 @@ with col_rank:
 with col_quad:
     st.subheader("Quadrante de oportunidades")
     st.caption(
-        "Superior direito: alta atividade e boa acessibilidade — consolidados. "
-        "Superior esquerdo: boa acessibilidade, baixa ocupação — potencial latente."
+        "Superior direito: alta atividade e boa acessibilidade, consolidados. "
+        "Superior esquerdo: boa acessibilidade, baixa ocupação, potencial latente."
     )
     if all(c in df.columns for c in ("score_eco", "score_ace", "score_final")):
         st.plotly_chart(
@@ -129,7 +138,7 @@ with col_metricas:
     st.markdown("---")
 
     m1, m2, m3 = st.columns(3)
-    m1.metric("Score econômico",     f"{row.get('score_eco', 0):.1f}")
+    m1.metric("Score econômico", f"{row.get('score_eco', 0):.1f}")
     m2.metric("Score acessibilidade", f"{row.get('score_ace', 0):.1f}")
     m3.metric("Score qualidade urbana", f"{row.get('score_qua', 0):.1f}")
 
@@ -138,9 +147,9 @@ with col_metricas:
     v_emp  = row.get("total_empresas")
     v_emb  = row.get("total_embarques_dia")
     v_parq = row.get("total_parques")
-    m4.metric("Empresas ativas", f"{int(v_emp):,}"  if pd.notna(v_emp)  else "—")
-    m5.metric("Embarques/dia",   f"{int(v_emb):,}"  if pd.notna(v_emb)  else "—")
-    m6.metric("Parques",         f"{int(v_parq)}"   if pd.notna(v_parq) else "—")
+    m4.metric("Empresas ativas", f"{int(v_emp):,}" if pd.notna(v_emp) else "-")
+    m5.metric("Embarques/dia", f"{int(v_emb):,}" if pd.notna(v_emb) else "-")
+    m6.metric("Parques", f"{int(v_parq)}" if pd.notna(v_parq) else "-")
 
     if "setor_dominante_nome" in row and pd.notna(row["setor_dominante_nome"]):
         st.markdown(f"**Setor dominante:** {row['setor_dominante_nome']}")
@@ -161,3 +170,5 @@ with st.expander("Ver ranking completo"):
         df[available.keys()].rename(columns=available),
         use_container_width=True, hide_index=True,
     )
+
+render_footer()

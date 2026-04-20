@@ -13,24 +13,26 @@ from pathlib import Path
 import pandas as pd
 from etl.transform._io import load_bairros_canonicos
 
+
 log = logging.getLogger(__name__)
 
-BASE = Path(__file__).resolve().parents[2] / "data"
-PROCESSED = BASE / "processed"
-ECO_PATH  = BASE / "raw" / "atividade_economica" / "atividade_economica.csv"
-
+BASE = Path(__file__).resolve().parents[2]/"data"
+PROCESSED = BASE/"processed"
+ECO_PATH = BASE/"raw"/"atividade_economica"/"atividade_economica.csv"
 INPUTS = {
-    "economico":     PROCESSED / "empresas_por_bairro.parquet",
-    "acessibilidade": PROCESSED / "acessibilidade_por_bairro.parquet",
-    "qualidade":     PROCESSED / "qualidade_urbana_por_bairro.parquet",
-    "od":            PROCESSED / "matriz_od_agregada.parquet",
+    "economico": PROCESSED/"empresas_por_bairro.parquet",
+    "acessibilidade": PROCESSED/"acessibilidade_por_bairro.parquet",
+    "qualidade": PROCESSED/"qualidade_urbana_por_bairro.parquet",
+    "od": PROCESSED/"matriz_od_agregada.parquet",
 }
-OUT_PATH = PROCESSED / "score_final.parquet"
-
+OUT_PATH = PROCESSED/"score_final.parquet"
 PESOS = {"economico": 0.40, "acessibilidade": 0.35, "qualidade": 0.25}
 
 
-def _load(path: Path, label: str) -> pd.DataFrame | None:
+def _load(
+    path: Path,
+    label: str
+) -> pd.DataFrame | None:
     """
     Carrega Parquet processado, retornando None se não existir.
 
@@ -39,7 +41,7 @@ def _load(path: Path, label: str) -> pd.DataFrame | None:
     :return: DataFrame ou None
     """
     if not path.exists():
-        log.warning("%s não encontrado — dimensão ausente no score", label)
+        log.warning("%s não encontrado - dimensão ausente no score", label)
         return None
     df = pd.read_parquet(path)
     log.info("%s carregado: %d bairros", label, len(df))
@@ -59,7 +61,10 @@ def _min_max(series: pd.Series) -> pd.Series:
     return (series - mn) / (mx - mn) * 100
 
 
-def _merge_economico(score: pd.DataFrame, df_eco: pd.DataFrame | None) -> pd.DataFrame:
+def _merge_economico(
+    score: pd.DataFrame,
+    df_eco: pd.DataFrame | None
+) -> pd.DataFrame:
     """
     Incorpora dimensão econômica ao score.
 
@@ -81,7 +86,10 @@ def _merge_economico(score: pd.DataFrame, df_eco: pd.DataFrame | None) -> pd.Dat
     return score.merge(df_eco[cols], on="bairro", how="left")
 
 
-def _merge_acessibilidade(score: pd.DataFrame, df_ace: pd.DataFrame | None) -> pd.DataFrame:
+def _merge_acessibilidade(
+    score: pd.DataFrame,
+    df_ace: pd.DataFrame | None
+) -> pd.DataFrame:
     """
     Incorpora dimensão acessibilidade ao score.
 
@@ -103,7 +111,10 @@ def _merge_acessibilidade(score: pd.DataFrame, df_ace: pd.DataFrame | None) -> p
     return score.merge(df_ace[cols], on="bairro", how="left")
 
 
-def _merge_qualidade(score: pd.DataFrame, df_qua: pd.DataFrame | None) -> pd.DataFrame:
+def _merge_qualidade(
+    score: pd.DataFrame,
+    df_qua: pd.DataFrame | None
+) -> pd.DataFrame:
     """
     Incorpora dimensão qualidade urbana ao score.
 
@@ -121,7 +132,10 @@ def _merge_qualidade(score: pd.DataFrame, df_qua: pd.DataFrame | None) -> pd.Dat
     return score.merge(df_qua[cols], on="bairro", how="left")
 
 
-def _aplicar_bonus_od(score: pd.DataFrame, df_od: pd.DataFrame | None) -> pd.DataFrame:
+def _aplicar_bonus_od(
+    score: pd.DataFrame,
+    df_od: pd.DataFrame | None
+) -> pd.DataFrame:
     """
     Aplica fluxo de matriz O-D como bônus (30%) no componente de acessibilidade.
 
@@ -165,9 +179,9 @@ def run() -> pd.DataFrame:
 
     # score_eco/ace/qua já em [0,100]; pesos somam 1.0 => mantém range
     score["score_final"] = (
-        PESOS["economico"]      * score["score_eco"]
+        PESOS["economico"] * score["score_eco"]
         + PESOS["acessibilidade"] * score["score_ace"]
-        + PESOS["qualidade"]      * score["score_qua"]
+        + PESOS["qualidade"] * score["score_qua"]
     ).round(2)
 
     score = score.sort_values("score_final", ascending=False).reset_index(drop=True)

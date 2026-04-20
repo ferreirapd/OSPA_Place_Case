@@ -6,6 +6,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
+
 CORES_BH = px.colors.sequential.Oranges
 COR_DESTAQUE = "#e05c00"
 
@@ -94,7 +95,6 @@ def pie_setores(
 ) -> go.Figure:
     """
     Gráfico de pizza para distribuição de setores econômicos.
-
     Agrupa os menores setores em 'Outros' para manter legibilidade.
 
     :param df: DataFrame com setor e contagem

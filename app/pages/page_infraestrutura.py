@@ -1,34 +1,51 @@
 """
-Infraestrutura e Mobilidade — acessibilidade e qualidade urbana por bairro.
+Infraestrutura e Mobilidade: acessibilidade e qualidade urbana por bairro.
 """
 
 from pathlib import Path
 import sys
 import pandas as pd
 import streamlit as st
+from app.components.graficos import bar_ranking, scatter_dimensoes
+from app.components.footer import render_footer
+
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from app.components.graficos import bar_ranking, scatter_dimensoes
-
-PROCESSED = Path(__file__).resolve().parents[2] / "data" / "processed"
+PROCESSED = Path(__file__).resolve().parents[2]/"data"/"processed"
 
 
 @st.cache_data
 def load_ace() -> pd.DataFrame | None:
-    path = PROCESSED / "acessibilidade_por_bairro.parquet"
+    """
+    Carrega os dados de acessibilidade por bairro, incluindo pontos de ônibus,
+    embarques diários e acidentes de trânsito.
+    
+    :return: DataFrame com colunas 'bairro', 'total_pontos_onibus','total_embarques_dia', 'total_acidentes' e 'indice_acessibilidade', ou None se o arquivo não existir
+    """
+    path = PROCESSED/"acessibilidade_por_bairro.parquet"
     return pd.read_parquet(path) if path.exists() else None
 
 
 @st.cache_data
 def load_qua() -> pd.DataFrame | None:
-    path = PROCESSED / "qualidade_urbana_por_bairro.parquet"
+    """
+    Carrega os dados de qualidade urbana por bairro.
+
+    :return: DataFrame com colunas 'bairro', 'total_parques', 'total_equipamentos_esportivos' e 'indice_qualidade_urbana', ou None se o arquivo não existir
+    """
+    path = PROCESSED/"qualidade_urbana_por_bairro.parquet"
     return pd.read_parquet(path) if path.exists() else None
 
 
 @st.cache_data
 def load_od() -> pd.DataFrame | None:
-    path = PROCESSED / "matriz_od_agregada.parquet"
+    """
+    Carrega a matriz de origem-destino agregada por bairro, baseada na bilhetagem eletrônica.
+
+    :return: DataFrame com colunas 'bairro' e 'total_viagens_originadas', ou None se o arquivo não existir
+    """
+    path = PROCESSED/"matriz_od_agregada.parquet"
     return pd.read_parquet(path) if path.exists() else None
 
 
@@ -178,3 +195,5 @@ with tab_qua:
                 .sort_values("Índice", ascending=False),
                 use_container_width=True, hide_index=True,
             )
+
+render_footer()

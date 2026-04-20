@@ -1,18 +1,29 @@
 """
-Visão Técnica — pipeline, arquitetura e próximos passos.
+Visão Técnica: pipeline, arquitetura e próximos passos.
 """
 
 from pathlib import Path
 import sys
 import streamlit as st
+from app.components.footer import render_footer
+
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-ETL_DIR = Path(__file__).resolve().parents[2] / "etl"
+ETL_DIR = Path(__file__).resolve().parents[2]/"etl"
 
 
-def show_code(path: Path, label: str) -> None:
-    with st.expander(f"Código — {label}"):
+def show_code(
+    path: Path,
+    label: str
+) -> None:
+    """
+    Exibe o código fonte de um módulo do pipeline dentro de um st.expander.
+
+    :param path: caminho para o arquivo .py do módulo
+    :param label: rótulo legível para o expander
+    """
+    with st.expander(f"Código - {label}"):
         if path.exists():
             st.code(path.read_text(encoding="utf-8"), language="python")
         else:
@@ -33,7 +44,7 @@ with tab_pipeline:
         """
         O pipeline foi desenvolvido em Python com três estágios sequenciais:
         extração, transformação e composição do score final. Cada estágio é
-        independente — dá pra rodar `--skip-extract` em desenvolvimento e
+        independente, dá pra rodar `--skip-extract` em desenvolvimento e
         reprocessar só as transformações sem rebaixar tudo de novo.
 
         A estrutura de pastas reflete essa separação:
@@ -44,7 +55,7 @@ with tab_pipeline:
         """
 OSPA_Place_Case/
 ├── data/
-│   ├── raw/                        # CSVs brutos — não versionados
+│   ├── raw/                        # CSVs brutos, não versionados
 │   └── processed/
 │       ├── empresas_por_bairro.parquet
 │       ├── acessibilidade_por_bairro.parquet
@@ -57,7 +68,7 @@ OSPA_Place_Case/
 │   ├── extract.py
 │   ├── pipeline.py
 │   └── transform/
-│       ├── _io.py          # leitura de CSV, normalização, fuzzy match
+│       ├── _io.py          # leitura de CSV, normalização, fuzzy match para nomes de bairros
 │       ├── _spatial.py     # spatial join GeoPandas reutilizável
 │       ├── economico.py
 │       ├── acessibilidade.py
@@ -69,13 +80,17 @@ OSPA_Place_Case/
 │   ├── main.py
 │   ├── components/
 │   │   ├── graficos.py
-│   │   └── mapas.py
+│   │   ├── mapas.py
+│   │   └── footer.py
 │   └── pages/
 │
 ├── notebooks/
+│   └── exploratory_analysis.ipynb
 ├── validate_etl.py
 ├── Dockerfile
 ├── docker-compose.yml
+├── runtime.txt
+├── requirements-etl.txt
 └── requirements.txt
         """,
         language="text",
@@ -91,7 +106,7 @@ OSPA_Place_Case/
         É idempotente: se o arquivo já existe em `data/raw/`, pula.
         """
     )
-    show_code(ETL_DIR / "extract.py", "extract.py")
+    show_code(ETL_DIR/"extract.py", "extract.py")
 
     st.markdown("---")
     st.subheader("Transform")
@@ -103,7 +118,7 @@ OSPA_Place_Case/
         atividade econômica, e agrega as métricas por bairro.
 
         O fuzzy match existe porque o `bairros.csv` da PBH usa subdivisões
-        administrativas internas como nomes — tipo "Primeira Seção", "Do Castelo" —
+        administrativas internas como nomes, tipo "Primeira Seção", "Do Castelo", 
         que não correspondem ao que o resto dos datasets chama de bairro. A base
         canônica são os ~489 nomes populares que aparecem nos registros de
         atividade econômica: CNPJ é registrado no endereço real, não no cadastro
@@ -111,25 +126,25 @@ OSPA_Place_Case/
 
         Bairros que não encontram match com score acima de 88 são descartados e
         registrados em `data/processed/bairros_excluidos.csv` para auditoria.
-        No último pipeline rodado, foram 208 exclusões — quase todas subdivisões
+        No último pipeline rodado, foram 208 exclusões, quase todas subdivisões
         numeradas do cadastro administrativo sem correspondente popular.
 
         O módulo da Matriz O-D usa PySpark porque o dataset tem 188k registros de
         pares hexágono H3 × hexágono H3. A agregação por hexágono de origem no
         Spark reduz o problema para ~2.300 hexágonos únicos antes do
-        nearest-neighbor em Pandas/NumPy — que é quando faz sentido sair do Spark.
+        nearest-neighbor em Pandas/NumPy, que é quando faz sentido sair do Spark.
         """
     )
 
     col_a, col_b = st.columns(2)
     with col_a:
-        show_code(ETL_DIR / "transform" / "_io.py", "_io.py")
-        show_code(ETL_DIR / "transform" / "_spatial.py", "_spatial.py")
-        show_code(ETL_DIR / "transform" / "economico.py", "economico.py")
+        show_code(ETL_DIR/"transform"/"_io.py", "_io.py")
+        show_code(ETL_DIR/"transform"/"_spatial.py", "_spatial.py")
+        show_code(ETL_DIR/"transform"/"economico.py", "economico.py")
     with col_b:
-        show_code(ETL_DIR / "transform" / "acessibilidade.py", "acessibilidade.py")
-        show_code(ETL_DIR / "transform" / "qualidade_urbana.py", "qualidade_urbana.py")
-        show_code(ETL_DIR / "transform" / "matriz_od.py", "matriz_od.py")
+        show_code(ETL_DIR/"transform"/"acessibilidade.py", "acessibilidade.py")
+        show_code(ETL_DIR/"transform"/"qualidade_urbana.py", "qualidade_urbana.py")
+        show_code(ETL_DIR/"transform"/"matriz_od.py", "matriz_od.py")
 
     st.markdown("---")
     st.subheader("Score final")
@@ -140,13 +155,13 @@ OSPA_Place_Case/
         (tipo o Centro com 26 mil empresas) comprima todos os outros bairros para
         perto de zero numa normalização min-max direta.
 
-        A base da tabela final são os 489 bairros canônicos — não a união das
+        A base da tabela final são os 489 bairros canônicos, não a união das
         fontes, que produziria duplicatas por variações de nome. Bairros sem
         dado em alguma dimensão recebem a média da dimensão como imputação.
         """
     )
-    show_code(ETL_DIR / "transform" / "score.py", "score.py")
-    show_code(ETL_DIR / "pipeline.py", "pipeline.py")
+    show_code(ETL_DIR/"transform"/"score.py", "score.py")
+    show_code(ETL_DIR/"pipeline.py", "pipeline.py")
 
 
 with tab_arq:
@@ -155,7 +170,7 @@ with tab_arq:
         """
         A arquitetura local foi desenhada para ser portável para produção sem
         mudar o código de transformação. O mesmo Pandas e PySpark que rodam no
-        Docker rodam no Glue — a diferença é que na AWS o cluster é gerenciado,
+        Docker rodam no Glue, a diferença é que na AWS o cluster é gerenciado,
         o agendamento é via EventBridge e o armazenamento é no S3.
         """
     )
@@ -201,7 +216,7 @@ with tab_arq:
           sem rebaixar tudo. Arquivos raw com mais de 90 dias migram
           automaticamente para Glacier via lifecycle policy.
 
-        - **ECS Fargate** roda a mesma imagem Docker usada localmente — zero
+        - **ECS Fargate** roda a mesma imagem Docker usada localmente, zero
           mudança no código do app ao migrar para produção.
 
         - **Glue Data Catalog** como registro central de schemas. Quando o portal
@@ -253,32 +268,34 @@ with tab_futuro:
         mas há limites claros no que dados públicos conseguem capturar. As
         evoluções mais relevantes viriam de três frentes.
 
-        **Novas fontes públicas disponíveis hoje** — o IBGE tem dados do Censo
+        **Novas fontes públicas disponíveis hoje**: o IBGE tem dados do Censo
         2022 por setor censitário que dariam contexto socioeconômico real aos
         bairros: renda média, densidade, perfil etário. O Cadastro de Empresas
         (CEMPRE) tem série histórica de abertura e fechamento de CNPJs, o que
-        permitiria calcular taxa de sobrevivência de negócios por bairro — sinal
+        permitiria calcular taxa de sobrevivência de negócios por bairro, sinal
         muito mais forte de maturidade econômica do que simplesmente contar
         empresas ativas.
 
-        **Dados privados via parceria** — o gap mais crítico no score atual é a
+        **Dados privados via parceria**: o gap mais crítico no score atual é a
         ausência de dado de demanda de consumo. Volume de transações por cartão
         por bairro e categoria (Cielo, Stone, Rede) é provavelmente o dado mais
         direto para quem está decidindo onde abrir um negócio. Plataformas
-        imobiliárias dariam preço de m² comercial e taxa de vacância — custo de
+        imobiliárias dariam preço de m² comercial e taxa de vacância, custo de
         entrada e tendência de valorização. Apps de mobilidade capturam
         deslocamentos não cobertos pelo transporte público, especialmente
         periferias.
 
-        **Capacidades analíticas** — com histórico suficiente, dá pra sair de um
+        **Capacidades analíticas**: com histórico suficiente, dá pra sair de um
         score estático para modelos preditivos: bairros com perfil similar ao do
         Savassi de 10 anos atrás hoje, por exemplo. Isso muda completamente o
         valor da plataforma para investidores de longo prazo.
 
-        **Qualidade de dados em escala** — em produção faz sentido adicionar
+        **Qualidade de dados em escala**: em produção faz sentido adicionar
         validação formal com Great Expectations logo após cada ingestão. Se a
         distribuição de CNAEs mudar muito em relação ao mês anterior, ou se
         bairros conhecidos sumirem do dataset, o job para antes de propagar
         dado ruim para o score.
         """
     )
+
+render_footer()

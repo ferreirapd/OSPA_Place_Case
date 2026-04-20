@@ -1,4 +1,4 @@
-# OSPA Place Case — Pedro Ferreira
+# OSPA Place Data Engineer Case - Pedro Ferreira
 
 Pipeline de dados e plataforma de visualização para orientar decisões de
 investimento em Belo Horizonte, construída sobre dados públicos do
@@ -26,8 +26,8 @@ pipeline.
 ```
 OSPA_Place_Case/
 ├── data/
-│   ├── raw/                        # CSVs brutos — não versionados
-│   └── processed/                  # Parquets de saída
+│   ├── raw/                        # CSVs brutos, não versionados
+│   └── processed/
 │       ├── empresas_por_bairro.parquet
 │       ├── acessibilidade_por_bairro.parquet
 │       ├── qualidade_urbana_por_bairro.parquet
@@ -36,35 +36,32 @@ OSPA_Place_Case/
 │       └── bairros_excluidos.csv   # auditoria de exclusões do ETL
 │
 ├── etl/
-│   ├── extract.py                  # download via API CKAN
-│   ├── pipeline.py                 # orquestrador
+│   ├── extract.py
+│   ├── pipeline.py
 │   └── transform/
-│       ├── _io.py                  # leitura de CSV, normalização, fuzzy match
-│       ├── _spatial.py             # spatial join GeoPandas reutilizável
+│       ├── _io.py          # leitura de CSV, normalização, fuzzy match para nomes de bairros
+│       ├── _spatial.py     # spatial join GeoPandas reutilizável
 │       ├── economico.py
 │       ├── acessibilidade.py
 │       ├── qualidade_urbana.py
-│       ├── matriz_od.py            # PySpark
+│       ├── matriz_od.py    # PySpark
 │       └── score.py
 │
 ├── app/
-│   ├── main.py                     # entry point Streamlit (st.navigation)
+│   ├── main.py
 │   ├── components/
 │   │   ├── graficos.py
-│   │   └── mapas.py
+│   │   ├── mapas.py
+│   │   └── footer.py
 │   └── pages/
-│       ├── page_home.py
-│       ├── page_panorama_economico.py
-│       ├── page_infraestrutura.py
-│       ├── page_oportunidades.py
-│       └── page_tecnica.py
 │
 ├── notebooks/
 │   └── exploratory_analysis.ipynb
-│
 ├── validate_etl.py
 ├── Dockerfile
 ├── docker-compose.yml
+├── runtime.txt
+├── requirements-etl.txt
 └── requirements.txt
 ```
 
@@ -103,7 +100,7 @@ Acesse: **http://localhost:8501**
 | Mapa de Oportunidades | Score final, quadrante estratégico, perfil por bairro |
 | Pipeline e Arquitetura | Pipeline ETL, código-fonte, arquitetura AWS, próximos passos |
 
-A navegação é controlada via `st.navigation()` em `app/main.py` — o nome no
+A navegação é controlada via `st.navigation()` em `app/main.py`, o nome no
 menu lateral e a ordem das páginas são definidos lá, independentes dos nomes
 de arquivo.
 
@@ -117,8 +114,8 @@ de arquivo.
 | ETL Matriz O-D | PySpark 3.5 |
 | Extração | Requests (API CKAN) |
 | Visualização | Plotly · Folium · streamlit-folium |
-| App | Streamlit 1.56 |
-| Container | Docker — python:3.11-slim + OpenJDK 21 JRE |
+| App | Streamlit |
+| Container | Docker - python:3.11-slim + OpenJDK 21 JRE |
 | Formato intermediário | Parquet (PyArrow) |
 
 ---
@@ -140,4 +137,4 @@ de arquivo.
 
 ## Autor
 
-Pedro Ferreira — [@ferreirapd](https://github.com/ferreirapd)
+Pedro Ferreira - [@ferreirapd](https://github.com/ferreirapd)

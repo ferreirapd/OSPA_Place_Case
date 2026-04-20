@@ -10,6 +10,7 @@ import folium
 import pandas as pd
 from folium.plugins import MarkerCluster
 
+
 BH_CENTER = [-19.9167, -43.9345]
 DEFAULT_ZOOM = 12
 

@@ -2,10 +2,10 @@
 Orquestrador do pipeline ETL completo.
 
 Etapas:
-1. Extract   — baixa todas as fontes do portal da PBH
-2. Transform — processa cada dimensão (econômica, acessibilidade, qualidade, O-D)
-3. Score     — compõe o score final por bairro
-4. Audit     — persiste lista de bairros excluídos em cada etapa
+1. Extract: baixa todas as fontes do portal da PBH
+2. Transform: processa cada dimensão (econômica, acessibilidade, qualidade, O-D)
+3. Score: compõe o score final por bairro
+4. Audit: persiste lista de bairros excluídos em cada etapa
 
 Uso:
     python -m etl.pipeline               # extrai + transforma tudo
@@ -21,6 +21,7 @@ from etl.extract import extract_all
 from etl.transform import acessibilidade, economico, matriz_od, qualidade_urbana, score
 from etl.transform._io import save_exclusoes
 
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
@@ -31,11 +32,16 @@ log = logging.getLogger("pipeline")
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 EXCLUSOES_OUT = (
-    Path(__file__).resolve().parents[1] / "data" / "processed" / "bairros_excluidos.csv"
+    Path(__file__).resolve().parents[1]/"data"/"processed"/"bairros_excluidos.csv"
 )
 
 
-def _step(name: str, fn, *args, **kwargs):
+def _step(
+    name: str,
+    fn,
+    *args,
+    **kwargs
+) -> any:
     """
     Executa uma etapa do pipeline com logging de tempo e erro.
 
@@ -63,19 +69,19 @@ def run(skip_extract: bool = False) -> None:
     :param skip_extract: Se True, pula a etapa de download
     """
     t0 = time.time()
-    log.info("Pipeline OSPA Place Case - iniciando")
+    log.info("Pipeline OSPA Place Data Engineer Case - iniciando")
 
     if not skip_extract:
         _step("Extract - download das fontes", extract_all)
     else:
         log.info("Extract pulada (--skip-extract)")
 
-    _step("Transform - Atividade Econômica",       economico.run)
+    _step("Transform - Atividade Econômica", economico.run)
     _step("Transform - Acessibilidade Multimodal", acessibilidade.run)
-    _step("Transform - Qualidade Urbana",          qualidade_urbana.run)
-    _step("Transform - Matriz O-D (PySpark)",      matriz_od.run)
-    _step("Compose - Score Final",                 score.run)
-    _step("Audit - Exclusões",                     save_exclusoes, EXCLUSOES_OUT)
+    _step("Transform - Qualidade Urbana", qualidade_urbana.run)
+    _step("Transform - Matriz O-D (PySpark)", matriz_od.run)
+    _step("Compose - Score Final", score.run)
+    _step("Audit - Exclusões", save_exclusoes, EXCLUSOES_OUT)
 
     log.info("=" * 60)
     log.info("Pipeline concluído em %.1fs", time.time() - t0)
@@ -84,7 +90,7 @@ def run(skip_extract: bool = False) -> None:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="ETL pipeline - OSPA Place Case")
+    parser = argparse.ArgumentParser(description="ETL pipeline - OSPA Place Data Engineer Case")
     parser.add_argument(
         "--skip-extract",
         action="store_true",

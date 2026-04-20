@@ -11,28 +11,21 @@ Nomes de bairro são padronizados contra a tabela canônica de NOME_BAIRRO.
 import logging
 from pathlib import Path
 import pandas as pd
-from etl.transform._io import (
-    find_column,
-    load_bairros_canonicos,
-    load_csv,
-    match_bairro_canonico,
-)
+from etl.transform._io import find_column, load_bairros_canonicos, load_csv, match_bairro_canonico
+
 
 log = logging.getLogger(__name__)
 
-BASE = Path(__file__).resolve().parents[2] / "data"
-RAW = BASE / "raw"
-PROCESSED = BASE / "processed"
-
+BASE = Path(__file__).resolve().parents[2]/"data"
+RAW = BASE/"raw"
+PROCESSED = BASE/"processed"
 PATHS = {
-    "parques":      RAW / "parques"                 / "parques.csv",
-    "equipamentos": RAW / "equipamentos_esportivos" / "equipamentos_esportivos.csv",
-    "eco":          RAW / "atividade_economica"     / "atividade_economica.csv",
+    "parques": RAW/"parques"/"parques.csv",
+    "equipamentos": RAW/"equipamentos_esportivos"/"equipamentos_esportivos.csv",
+    "eco": RAW/"atividade_economica"/"atividade_economica.csv",
 }
-OUT_PATH = PROCESSED / "qualidade_urbana_por_bairro.parquet"
-
+OUT_PATH = PROCESSED/"qualidade_urbana_por_bairro.parquet"
 ETAPA = "qualidade_urbana"
-
 COL_CANDIDATES_BAIRRO = ("NOME_BAIRRO_POPULAR", "NOME_BAIRRO", "BAIRRO")
 
 
@@ -66,7 +59,7 @@ def _count_por_bairro(
 
     n_sem = df["BAIRRO_CANON"].isna().sum()
     if n_sem:
-        log.warning("%d registros de %s sem bairro canônico — descartados", n_sem, fonte)
+        log.warning("%d registros de %s sem bairro canônico - descartados", n_sem, fonte)
 
     return (
         df[df["BAIRRO_CANON"].notna()]
@@ -89,7 +82,7 @@ def _compute_index(df: pd.DataFrame) -> pd.DataFrame:
             df[col] = 0
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
 
-    rank_parques      = df["total_parques"].rank(pct=True)
+    rank_parques = df["total_parques"].rank(pct=True)
     rank_equipamentos = df["total_equipamentos_esportivos"].rank(pct=True)
     df["indice_qualidade_urbana"] = (
         0.50 * rank_parques + 0.50 * rank_equipamentos
@@ -105,14 +98,12 @@ def run() -> pd.DataFrame:
     """
     log.info("Iniciando transformação: %s", ETAPA)
 
-    canonicos  = load_bairros_canonicos(PATHS["eco"])
-    df_parques = load_csv(PATHS["parques"],      "parques")
-    df_equip   = load_csv(PATHS["equipamentos"], "equipamentos_esportivos")
+    canonicos = load_bairros_canonicos(PATHS["eco"])
+    df_parques = load_csv(PATHS["parques"], "parques")
+    df_equip = load_csv(PATHS["equipamentos"], "equipamentos_esportivos")
 
     agg_parques = _count_por_bairro(df_parques, "total_parques", canonicos, "parques")
-    agg_equip   = _count_por_bairro(
-        df_equip, "total_equipamentos_esportivos", canonicos, "equipamentos_esportivos",
-    )
+    agg_equip = _count_por_bairro(df_equip, "total_equipamentos_esportivos", canonicos, "equipamentos_esportivos")
 
     df = agg_parques.merge(agg_equip, on="bairro", how="outer").fillna(0)
     df = _compute_index(df)

@@ -1,5 +1,5 @@
 """
-Script de validação dos Parquets gerados pelo ETL do projeto OSPA Place Case.
+Script de validação dos Parquets gerados pelo ETL do projeto OSPA Place Data Engineer Case.
 
 Execução dentro do container:
     docker-compose exec app python validate_etl.py
@@ -12,16 +12,14 @@ import sys
 from pathlib import Path
 import pandas as pd
 
-# ── Configuração ──────────────────────────────────────────────────────────────
 
 PROCESSED_DIR = Path("data/processed")
-
 PARQUET_SPECS: dict[str, dict] = {
     "empresas_por_bairro.parquet": {
         "col_bairro": "bairro",
         "cols_numericas": ["total_empresas"],
         "score_col": None,
-        # Nulos esperados em dimensões opcionais — sem threshold de alerta
+        # Nulos esperados em dimensões opcionais - sem threshold de alerta
         "nulos_ok": [],
     },
     "acessibilidade_por_bairro.parquet": {
@@ -74,33 +72,51 @@ BAIRROS_CONHECIDOS = [
     "FUNCIONARIOS",
     "BARREIRO",
 ]
-
 SEPARATOR = "─" * 60
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
-
 def secao(titulo: str) -> None:
+    """
+    Imprime um título de seção formatado para destacar as etapas.
+    
+    :param titulo: Título da seção
+    """
     print(f"\n{SEPARATOR}")
     print(f"  {titulo}")
     print(SEPARATOR)
 
 
 def ok(msg: str) -> None:
+    """
+    Imprime uma mensagem de sucesso formatada com um emoji de check.
+
+    :param msg: Mensagem a ser exibida
+    """
     print(f"  ✅  {msg}")
 
 
 def warn(msg: str) -> None:
+    """
+    Imprime uma mensagem de aviso formatada com um emoji de alerta.
+    
+    :param msg: Mensagem a ser exibida
+    """
     print(f"  ⚠️   {msg}")
 
 
 def erro(msg: str) -> None:
+    """
+    Imprime uma mensagem de erro formatada com um emoji de erro.
+
+    :param msg: Mensagem a ser exibida
+    """
     print(f"  ❌  {msg}")
 
 
-# ── Etapa 1: Leitura e estrutura ──────────────────────────────────────────────
-
-def validar_estrutura(nome: str, spec: dict) -> pd.DataFrame | None:
+def validar_estrutura(
+    nome: str,
+    spec: dict
+) -> pd.DataFrame | None:
     """
     Carrega o Parquet e valida shape, tipos e nulos.
 
@@ -108,8 +124,8 @@ def validar_estrutura(nome: str, spec: dict) -> pd.DataFrame | None:
     :param spec: Dicionário com metadados esperados do arquivo
     :return: DataFrame carregado, ou None se falhou
     """
-    secao(f"ETAPA 1 — Estrutura: {nome}")
-    caminho = PROCESSED_DIR / nome
+    secao(f"ETAPA 1 - Estrutura: {nome}")
+    caminho = PROCESSED_DIR/nome
 
     if not caminho.exists():
         erro(f"Arquivo não encontrado: {caminho}")
@@ -117,7 +133,7 @@ def validar_estrutura(nome: str, spec: dict) -> pd.DataFrame | None:
 
     try:
         df = pd.read_parquet(caminho)
-        ok(f"Carregado com sucesso — shape: {df.shape}")
+        ok(f"Carregado com sucesso - shape: {df.shape}")
     except Exception as e:
         erro(f"Falha ao carregar: {e}")
         return None
@@ -128,7 +144,7 @@ def validar_estrutura(nome: str, spec: dict) -> pd.DataFrame | None:
     for col in df.columns:
         dtype = str(df[col].dtype)
         nulos = df[col].isna().sum()
-        pct   = nulos / len(df) * 100
+        pct = nulos / len(df) * 100
         # Só emite ⚠️ se: >20% de nulos E coluna não está na lista de nulos esperados
         flag = "⚠️ " if (pct > 20 and col not in nulos_ok) else "  "
         print(f"    {flag} {col:<40} dtype={dtype:<15} nulos={nulos} ({pct:.1f}%)")
@@ -151,9 +167,11 @@ def validar_estrutura(nome: str, spec: dict) -> pd.DataFrame | None:
     return df
 
 
-# ── Etapa 2: Sanidade negocial ────────────────────────────────────────────────
-
-def validar_sanidade(nome: str, df: pd.DataFrame, spec: dict) -> None:
+def validar_sanidade(
+    nome: str,
+    df: pd.DataFrame,
+    spec: dict
+) -> None:
     """
     Valida se os dados fazem sentido do ponto de vista de negócio.
 
@@ -161,18 +179,17 @@ def validar_sanidade(nome: str, df: pd.DataFrame, spec: dict) -> None:
     :param df: DataFrame já carregado
     :param spec: Dicionário com metadados esperados do arquivo
     """
-    secao(f"ETAPA 2 — Sanidade negocial: {nome}")
+    secao(f"ETAPA 2 - Sanidade negocial: {nome}")
 
     col_bairro = spec["col_bairro"]
 
     if len(df) == 0:
-        warn("DataFrame vazio — ETL não gerou linhas para este arquivo")
+        warn("DataFrame vazio - ETL não gerou linhas para este arquivo")
         return
 
-    # ── 2a. Bairros conhecidos ────────────────────────────────────────────────
     if col_bairro in df.columns and df[col_bairro].dtype == object:
 
-        # Normaliza a coluna para MAIÚSCULAS ASCII sem acento — mesmo padrão do ETL
+        # Normaliza a coluna para MAIÚSCULAS ASCII sem acento - mesmo padrão do ETL
         bairros_norm = (
             df[col_bairro]
             .str.strip()
@@ -197,24 +214,22 @@ def validar_sanidade(nome: str, df: pd.DataFrame, spec: dict) -> None:
     elif col_bairro in df.columns:
         warn(
             f"Coluna '{col_bairro}' tem dtype={df[col_bairro].dtype} "
-            "— esperado object/string"
+            f"- esperado object/string"
         )
     else:
-        warn("Pulando verificação de bairros — coluna ausente")
+        warn("Pulando verificação de bairros - coluna ausente")
 
-    # ── 2b. Cardinalidade ────────────────────────────────────────────────────
     if col_bairro in df.columns:
         n_unique = df[col_bairro].nunique()
-        n_total  = len(df)
+        n_total = len(df)
         if n_unique < n_total:
             warn(
                 f"{n_total - n_unique} bairros duplicados "
-                f"({n_unique} únicos de {n_total} linhas) — possível bug no GROUP BY"
+                f"({n_unique} únicos de {n_total} linhas) - possível bug no GROUP BY"
             )
         else:
             ok(f"Cardinalidade OK: {n_unique} bairros únicos, sem duplicatas")
 
-    # ── 2c. Score: distribuição e range ──────────────────────────────────────
     score_col = spec["score_col"]
     if score_col and score_col in df.columns:
         s = df[score_col]
@@ -227,8 +242,8 @@ def validar_sanidade(nome: str, df: pd.DataFrame, spec: dict) -> None:
             ok("Todos os scores no intervalo [0, 100] ✓")
         else:
             erro(
-                f"{fora} scores fora de [0, 100] — "
-                "verifique a fórmula de score.py (multiplicação duplicada?)"
+                f"{fora} scores fora de [0, 100] - "
+                f"verifique a fórmula de score.py (multiplicação duplicada?)"
             )
 
         if col_bairro in df.columns:
@@ -242,7 +257,6 @@ def validar_sanidade(nome: str, df: pd.DataFrame, spec: dict) -> None:
             top10.index += 1
             print(top10.to_string())
 
-    # ── 2d. Valores negativos em métricas de contagem ────────────────────────
     for col in spec["cols_numericas"]:
         if col in df.columns and col != score_col:
             negativos = (pd.to_numeric(df[col], errors="coerce") < 0).sum()
@@ -251,12 +265,11 @@ def validar_sanidade(nome: str, df: pd.DataFrame, spec: dict) -> None:
             else:
                 ok(f"'{col}' sem valores negativos")
 
-    # ── 2e. Acidentes: verifica se NÃO são todos iguais (bug do parquet stale) ──
     if "total_acidentes" in df.columns:
         n_uniq = pd.to_numeric(df["total_acidentes"], errors="coerce").nunique()
         if n_uniq <= 1:
             erro(
-                "total_acidentes tem apenas 1 valor único — "
+                "total_acidentes tem apenas 1 valor único - "
                 "parquet stale da versão antiga (contagem global). "
                 "Rode o ETL completo para regenerar."
             )
@@ -264,9 +277,11 @@ def validar_sanidade(nome: str, df: pd.DataFrame, spec: dict) -> None:
             ok(f"total_acidentes: {n_uniq} valores distintos ✓ (spatial join funcionando)")
 
 
-# ── Etapa 3: Compatibilidade Streamlit ───────────────────────────────────────
-
-def validar_streamlit(nome: str, df: pd.DataFrame, spec: dict) -> None:
+def validar_streamlit(
+    nome: str,
+    df: pd.DataFrame,
+    spec: dict
+) -> None:
     """
     Simula checagens que o Streamlit faz ao renderizar o DataFrame.
 
@@ -274,7 +289,7 @@ def validar_streamlit(nome: str, df: pd.DataFrame, spec: dict) -> None:
     :param df: DataFrame já carregado
     :param spec: Dicionário com metadados esperados do arquivo
     """
-    secao(f"ETAPA 3 — Compatibilidade Streamlit: {nome}")
+    secao(f"ETAPA 3 - Compatibilidade Streamlit: {nome}")
 
     try:
         _ = df.to_json(orient="records")
@@ -282,7 +297,7 @@ def validar_streamlit(nome: str, df: pd.DataFrame, spec: dict) -> None:
     except Exception as e:
         erro(f"Falha na serialização JSON: {e}")
 
-    # Colunas object são normais (bairro, setor_dominante…) — só avisa se houver
+    # Colunas object são normais (bairro, setor_dominante…) - só avisa se houver
     obj_cols = df.select_dtypes(include="object").columns.tolist()
     if obj_cols:
         print(f"  ℹ️   Colunas string (object): {obj_cols}")
@@ -290,20 +305,20 @@ def validar_streamlit(nome: str, df: pd.DataFrame, spec: dict) -> None:
         ok("Sem colunas dtype=object")
 
     if isinstance(df.index, pd.RangeIndex):
-        ok("Index é RangeIndex — compatível com Streamlit")
+        ok("Index é RangeIndex - compatível com Streamlit")
     else:
         warn(
-            f"Index é '{type(df.index).__name__}' — "
+            f"Index é '{type(df.index).__name__}' - "
             "considere df.reset_index() antes de passar ao Streamlit"
         )
 
 
-# ── Main ──────────────────────────────────────────────────────────────────────
-
 def main() -> None:
-    """Ponto de entrada: itera sobre todos os Parquets e roda as 3 etapas."""
+    """
+    Ponto de entrada: itera sobre todos os Parquets e roda as 3 etapas.
+    """
     print("\n" + "═" * 60)
-    print("  BH Investment Insights — Validação de ETL")
+    print("  OSPA Place Data Engineer Case - Validação de ETL")
     print("═" * 60)
 
     resultados: dict[str, bool] = {}
@@ -323,14 +338,14 @@ def main() -> None:
         if sucesso:
             ok(nome)
         else:
-            erro(f"{nome} — falhou na leitura")
+            erro(f"{nome} - falhou na leitura")
 
     falhas = sum(1 for v in resultados.values() if not v)
     if falhas == 0:
         print("\n  🎉 Todos os Parquets passaram nas validações estruturais.")
         print("  Revise os ⚠️  e ❌  acima para ajustes negociais.\n")
     else:
-        print(f"\n  {falhas} arquivo(s) com falha crítica — verifique o ETL.\n")
+        print(f"\n  {falhas} arquivo(s) com falha crítica - verifique o ETL.\n")
         sys.exit(1)
 
 

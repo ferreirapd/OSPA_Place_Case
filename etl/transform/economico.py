@@ -10,28 +10,20 @@ Filtra empresas com alvará ativo, extrai divisão CNAE e agrega por bairro:
 import logging
 from pathlib import Path
 import pandas as pd
-from etl.transform._io import (
-    EXCLUSOES,
-    find_column,
-    load_bairros_canonicos,
-    load_csv,
-    match_bairro_canonico,
-)
+from etl.transform._io import EXCLUSOES, find_column, load_bairros_canonicos, load_csv, match_bairro_canonico
+
 
 log = logging.getLogger(__name__)
 
-BASE = Path(__file__).resolve().parents[2] / "data"
-RAW_PATH = BASE / "raw" / "atividade_economica" / "atividade_economica.csv"
-OUT_PATH = BASE / "processed" / "empresas_por_bairro.parquet"
-
+BASE = Path(__file__).resolve().parents[2]/"data"
+RAW_PATH = BASE/"raw"/"atividade_economica"/"atividade_economica.csv"
+OUT_PATH = BASE/"processed"/"empresas_por_bairro.parquet"
 ETAPA = "economico"
 FONTE = "atividade_economica"
-
 COL_CANDIDATES_BAIRRO = ("NOME_BAIRRO_POPULAR", "NOME_BAIRRO", "BAIRRO")
-COL_CANDIDATES_CNAE   = ("CNAE_PRINCIPAL", "CNAE", "COD_CNAE", "CNAE_FISCAL")
+COL_CANDIDATES_CNAE = ("CNAE_PRINCIPAL", "CNAE", "COD_CNAE", "CNAE_FISCAL")
 COL_CANDIDATES_ALVARA = ("IND_POSSUI_ALVARA", "POSSUI_ALVARA", "ALVARA")
-COL_CANDIDATES_DATA   = ("DATA_INICIO_ATIVIDADE", "DATA_ABERTURA", "INICIO_ATIVIDADE")
-
+COL_CANDIDATES_DATA = ("DATA_INICIO_ATIVIDADE", "DATA_ABERTURA", "INICIO_ATIVIDADE")
 ALVARA_ATIVO_VALUES = ("S", "SIM", "1", "Y", "YES")
 
 # Mapeamento CNAE divisão (2 dígitos) → nome macro do setor. Fonte: IBGE CNAE 2.3.
@@ -55,7 +47,10 @@ CNAE_LABELS: dict[str, str] = {
 }
 
 
-def _filtrar_ativos(df: pd.DataFrame, col_alvara: str | None) -> pd.DataFrame:
+def _filtrar_ativos(
+    df: pd.DataFrame,
+    col_alvara: str | None
+) -> pd.DataFrame:
     """
     Filtra apenas empresas com alvará ativo.
 
@@ -64,7 +59,7 @@ def _filtrar_ativos(df: pd.DataFrame, col_alvara: str | None) -> pd.DataFrame:
     :return: DataFrame filtrado; retorna df original se coluna ausente
     """
     if col_alvara is None:
-        log.warning("Coluna de alvará ausente — total inclui empresas inativas")
+        log.warning("Coluna de alvará ausente - total inclui empresas inativas")
         return df
 
     n_antes = len(df)
@@ -80,7 +75,10 @@ def _filtrar_ativos(df: pd.DataFrame, col_alvara: str | None) -> pd.DataFrame:
     return df
 
 
-def _clean(df: pd.DataFrame, canonicos: list[str]) -> pd.DataFrame:
+def _clean(
+    df: pd.DataFrame,
+    canonicos: list[str]
+) -> pd.DataFrame:
     """
     Filtra, normaliza e padroniza o DataFrame bruto de atividade econômica.
 
@@ -90,9 +88,9 @@ def _clean(df: pd.DataFrame, canonicos: list[str]) -> pd.DataFrame:
     :raises ValueError: Se coluna de bairro não for encontrada
     """
     col_bairro = find_column(df, *COL_CANDIDATES_BAIRRO)
-    col_cnae   = find_column(df, *COL_CANDIDATES_CNAE)
+    col_cnae = find_column(df, *COL_CANDIDATES_CNAE)
     col_alvara = find_column(df, *COL_CANDIDATES_ALVARA)
-    col_data   = find_column(df, *COL_CANDIDATES_DATA)
+    col_data = find_column(df, *COL_CANDIDATES_DATA)
 
     if col_bairro is None:
         raise ValueError(
@@ -112,7 +110,7 @@ def _clean(df: pd.DataFrame, canonicos: list[str]) -> pd.DataFrame:
 
     n_sem = df["BAIRRO_CANON"].isna().sum()
     if n_sem:
-        log.warning("%d empresas sem bairro canônico — descartadas", n_sem)
+        log.warning("%d empresas sem bairro canônico - descartadas", n_sem)
     df = df[df["BAIRRO_CANON"].notna()].copy()
 
     if col_cnae:

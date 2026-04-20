@@ -13,23 +13,21 @@ Pipeline:
 import logging
 from pathlib import Path
 
+
 log = logging.getLogger(__name__)
 
-BASE = Path(__file__).resolve().parents[2] / "data"
-RAW_OD      = BASE / "raw" / "matriz_od"            / "matriz_od.csv"
-RAW_BAIRROS = BASE / "raw" / "bairros"              / "bairros.csv"
-RAW_ECO     = BASE / "raw" / "atividade_economica"  / "atividade_economica.csv"
-OUT_PATH    = BASE / "processed" / "matriz_od_agregada.parquet"
-
+BASE = Path(__file__).resolve().parents[2]/"data"
+RAW_OD = BASE/"raw"/"matriz_od"/"matriz_od.csv"
+RAW_BAIRROS = BASE/"raw"/"bairros"/"bairros.csv"
+RAW_ECO = BASE/"raw"/"atividade_economica"/"atividade_economica.csv"
+OUT_PATH = BASE/"processed"/"matriz_od_agregada.parquet"
 ETAPA = "matriz_od"
-
-COL_ORIGEM_H3   = "H3_ORIGEM"
-COL_DESTINO_H3  = "H3_DESTINO"
+COL_ORIGEM_H3 = "H3_ORIGEM"
+COL_DESTINO_H3 = "H3_DESTINO"
 COL_GEOM_ORIGEM = "GEOMETRIA_ORIGEM"
 COL_BAIRRO_GEOM = "GEOMETRIA"
 COL_BAIRRO_NOME_CANDIDATOS = ("NOME_BAIRRO_POPULAR", "NOME_BAIRRO", "NOME")
-
-CRS_UTM   = "EPSG:31983"
+CRS_UTM = "EPSG:31983"
 CRS_WGS84 = "EPSG:4326"
 
 
@@ -55,7 +53,6 @@ def _get_spark():
 def _bairro_centroids_dict(bairros_path: Path) -> dict[str, tuple[float, float]]:
     """
     Lê polígonos de bairros e retorna dict {nome_upper: (lat, lng)} em WGS84.
-
     Usa o nome administrativo do bairros.csv apenas como chave interna;
     match_bairro_canonico() converte depois para nomes populares.
 
@@ -76,7 +73,7 @@ def _bairro_centroids_dict(bairros_path: Path) -> dict[str, tuple[float, float]]
 
     centroids: dict[str, tuple[float, float]] = {}
     for _, row in df.iterrows():
-        nome     = str(row.get(col_nome, "")).strip()
+        nome = str(row.get(col_nome, "")).strip()
         geom_wkt = str(row.get(COL_BAIRRO_GEOM, "")).strip()
         if not nome or not geom_wkt or geom_wkt == "nan":
             continue
@@ -174,8 +171,8 @@ def _nearest_bairro(
 
     orig_lats = df_h3["lat"].to_numpy()[:, None]
     orig_lngs = df_h3["lng"].to_numpy()[:, None]
-    dists_sq  = (orig_lats - lats) ** 2 + (orig_lngs - lngs) ** 2
-    idx       = np.argmin(dists_sq, axis=1)
+    dists_sq = (orig_lats - lats) ** 2 + (orig_lngs - lngs) ** 2
+    idx = np.argmin(dists_sq, axis=1)
 
     df_h3 = df_h3.copy()
     df_h3["bairro_raw"] = [nomes[i] for i in idx]
@@ -193,7 +190,7 @@ def run() -> None:
     log.info("Iniciando transformação: %s", ETAPA)
 
     if not RAW_OD.exists():
-        log.warning("Matriz O-D não encontrada em %s — pulando", RAW_OD)
+        log.warning("Matriz O-D não encontrada em %s - pulando", RAW_OD)
         return
 
     canonicos = load_bairros_canonicos(RAW_ECO)
@@ -201,12 +198,12 @@ def run() -> None:
     try:
         df_h3 = _extrair_h3_com_centroides(spark, RAW_OD)
         if df_h3.empty:
-            log.warning("Sem hexágonos válidos — abortando")
+            log.warning("Sem hexágonos válidos - abortando")
             return
 
         centroids = _bairro_centroids_dict(RAW_BAIRROS)
         if not centroids:
-            log.warning("Sem centroides de bairros — abortando")
+            log.warning("Sem centroides de bairros - abortando")
             return
 
         df_h3 = _nearest_bairro(df_h3, centroids)

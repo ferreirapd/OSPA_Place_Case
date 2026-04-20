@@ -19,6 +19,7 @@ from etl.transform._io import EPSG_PBH, match_bairro_canonico
 if TYPE_CHECKING:
     import geopandas as gpd
 
+
 log = logging.getLogger(__name__)
 
 
