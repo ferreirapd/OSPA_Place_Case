@@ -1,7 +1,19 @@
+# Core
 pandas==2.2.2
+numpy==1.26.4
+geopandas==0.14.4
 pyarrow==16.0.0
 requests==2.32.3
+python-dotenv==1.0.1
+
+# PySpark
+pyspark==3.5.1
+h3==3.7.7
+
+# Fuzzy matching
 rapidfuzz==3.9.6
+
+# Streamlit + viz
 streamlit==1.56.0
 plotly==5.22.0
 folium==0.16.0

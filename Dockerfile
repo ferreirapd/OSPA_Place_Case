@@ -13,7 +13,7 @@ ENV PATH="${JAVA_HOME}/bin:${PATH}"
 # --- Dependências Python ---
 WORKDIR /app
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements-etl.txt
 
 # --- App ---
 COPY . .
