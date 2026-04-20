@@ -1,5 +1,5 @@
 """
-Página 3: Oportunidades — score de atratividade para investimento por bairro.
+Mapa de Oportunidades — score de atratividade para investimento por bairro.
 """
 
 from pathlib import Path
@@ -13,20 +13,19 @@ from app.components.graficos import bar_ranking, radar_bairro, scatter_dimensoes
 
 PROCESSED = Path(__file__).resolve().parents[2] / "data" / "processed"
 
-st.set_page_config(page_title="Oportunidades · BH", layout="wide")
-st.title("Mapa de Oportunidades")
-st.caption(
-    "Score de atratividade por bairro: combinação ponderada de "
-    "atividade econômica (40%), acessibilidade (35%) e qualidade urbana (25%)"
-)
-st.markdown("---")
-
 
 @st.cache_data
 def load_score() -> pd.DataFrame | None:
     path = PROCESSED / "score_final.parquet"
     return pd.read_parquet(path) if path.exists() else None
 
+
+st.title("Mapa de Oportunidades")
+st.caption(
+    "Score de atratividade por bairro: combinação ponderada de "
+    "atividade econômica (40%), acessibilidade (35%) e qualidade urbana (25%)"
+)
+st.markdown("---")
 
 df = load_score()
 
@@ -36,12 +35,11 @@ if df is None:
 
 df["bairro_display"] = df["bairro"].str.title()
 
-# ── Metodologia ───────────────────────────────────────────────────────────────
 with st.expander("Como o score é calculado"):
     st.markdown(
         """
-        O score de atratividade (0–100) é a composição ponderada de três dimensões,
-        cada uma calculada a partir de rank percentual para eliminar distorções de escala:
+        O score (0–100) é a composição ponderada de três dimensões, cada uma
+        calculada a partir de rank percentual para eliminar distorções de escala:
 
         | Dimensão | Peso | Composição |
         |---|---|---|
@@ -57,7 +55,6 @@ with st.expander("Como o score é calculado"):
 
 st.markdown("---")
 
-# ── Top 5 ─────────────────────────────────────────────────────────────────────
 st.subheader("Top 5 bairros para investimento")
 top5 = df.head(5)
 cols_top = st.columns(5)
@@ -70,17 +67,17 @@ for i, (_, row) in enumerate(top5.iterrows()):
 
 st.markdown("---")
 
-# ── Ranking + quadrante ───────────────────────────────────────────────────────
 col_rank, col_quad = st.columns([1, 2])
 
 with col_rank:
     st.subheader("Ranking geral")
-    fig_rank = bar_ranking(
-        df.assign(bairro=df["bairro_display"]),
-        col_x="score_final", col_y="bairro",
-        titulo="", top_n=20,
+    st.plotly_chart(
+        bar_ranking(
+            df.assign(bairro=df["bairro_display"]),
+            col_x="score_final", col_y="bairro", titulo="", top_n=20,
+        ),
+        use_container_width=True,
     )
-    st.plotly_chart(fig_rank, use_container_width=True)
 
 with col_quad:
     st.subheader("Quadrante de oportunidades")
@@ -88,48 +85,40 @@ with col_quad:
         "Superior direito: alta atividade e boa acessibilidade — consolidados. "
         "Superior esquerdo: boa acessibilidade, baixa ocupação — potencial latente."
     )
-    score_cols_ok = all(c in df.columns for c in ("score_eco", "score_ace", "score_final"))
-    if score_cols_ok:
-        fig_quad = scatter_dimensoes(
-            df.assign(bairro=df["bairro_display"]),
-            col_x="score_eco",
-            col_y="score_ace",
-            col_size="score_final",
-            col_label="bairro",
-            titulo="",
+    if all(c in df.columns for c in ("score_eco", "score_ace", "score_final")):
+        st.plotly_chart(
+            scatter_dimensoes(
+                df.assign(bairro=df["bairro_display"]),
+                col_x="score_eco", col_y="score_ace",
+                col_size="score_final", col_label="bairro", titulo="",
+            ),
+            use_container_width=True,
         )
-        st.plotly_chart(fig_quad, use_container_width=True)
 
 st.markdown("---")
 
-# ── Perfil individual ─────────────────────────────────────────────────────────
 st.subheader("Perfil detalhado por bairro")
 
-bairro_sel = st.selectbox(
-    "Selecione um bairro",
-    sorted(df["bairro_display"].tolist()),
-    index=sorted(df["bairro_display"].tolist()).index("Estoril")
-    if "Estoril" in df["bairro_display"].tolist() else 0,
-)
+bairros_sorted = sorted(df["bairro_display"].tolist())
+default_idx = bairros_sorted.index("Estoril") if "Estoril" in bairros_sorted else 0
 
+bairro_sel = st.selectbox("Selecione um bairro", bairros_sorted, index=default_idx)
 row = df[df["bairro_display"] == bairro_sel].iloc[0]
 
 col_radar, col_metricas = st.columns([1, 2])
 
 with col_radar:
-    scores_radar = {}
+    scores_radar: dict[str, float] = {}
     for col, label in (
         ("score_eco", "Econômico"),
         ("score_ace", "Acessibilidade"),
         ("score_qua", "Qualidade Urbana"),
     ):
         if col in row and pd.notna(row[col]):
-            # Radar espera valores 0-1; score está em 0-100
-            scores_radar[label] = round(row[col] / 100, 3)
+            scores_radar[label] = round(float(row[col]) / 100, 3)
 
     if scores_radar:
-        fig_radar = radar_bairro(scores_radar, bairro_sel)
-        st.plotly_chart(fig_radar, use_container_width=True)
+        st.plotly_chart(radar_bairro(scores_radar, bairro_sel), use_container_width=True)
 
 with col_metricas:
     st.markdown(f"### {bairro_sel}")
@@ -140,27 +129,24 @@ with col_metricas:
     st.markdown("---")
 
     m1, m2, m3 = st.columns(3)
-    m1.metric("Score econômico", f"{row.get('score_eco', 0):.1f}")
+    m1.metric("Score econômico",     f"{row.get('score_eco', 0):.1f}")
     m2.metric("Score acessibilidade", f"{row.get('score_ace', 0):.1f}")
     m3.metric("Score qualidade urbana", f"{row.get('score_qua', 0):.1f}")
 
     st.markdown("---")
     m4, m5, m6 = st.columns(3)
-
-    total_emp = row.get("total_empresas")
-    total_emb = row.get("total_embarques_dia")
-    total_parq = row.get("total_parques")
-
-    m4.metric("Empresas ativas", f"{int(total_emp):,}" if pd.notna(total_emp) else "—")
-    m5.metric("Embarques/dia", f"{int(total_emb):,}" if pd.notna(total_emb) else "—")
-    m6.metric("Parques", f"{int(total_parq)}" if pd.notna(total_parq) else "—")
+    v_emp  = row.get("total_empresas")
+    v_emb  = row.get("total_embarques_dia")
+    v_parq = row.get("total_parques")
+    m4.metric("Empresas ativas", f"{int(v_emp):,}"  if pd.notna(v_emp)  else "—")
+    m5.metric("Embarques/dia",   f"{int(v_emb):,}"  if pd.notna(v_emb)  else "—")
+    m6.metric("Parques",         f"{int(v_parq)}"   if pd.notna(v_parq) else "—")
 
     if "setor_dominante_nome" in row and pd.notna(row["setor_dominante_nome"]):
         st.markdown(f"**Setor dominante:** {row['setor_dominante_nome']}")
 
 st.markdown("---")
 
-# ── Tabela ────────────────────────────────────────────────────────────────────
 with st.expander("Ver ranking completo"):
     cols_disp = {
         "ranking": "Ranking",

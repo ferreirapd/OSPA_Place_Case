@@ -1,12 +1,17 @@
-# OSPA Place Case - Pedro Ferreira
+# OSPA Place Case — Pedro Ferreira
 
-Pipeline de dados e plataforma de visualização para orientar decisões de investimento em Belo Horizonte, construída sobre dados públicos do [Portal de Dados Abertos da PBH](https://dados.pbh.gov.br).
+Pipeline de dados e plataforma de visualização para orientar decisões de
+investimento em Belo Horizonte, construída sobre dados públicos do
+[Portal de Dados Abertos da PBH](https://dados.pbh.gov.br).
 
 ---
 
 ## O que o projeto faz
 
-O pipeline cruza oito bases públicas da PBH e da BHTRANS para produzir um score de atratividade por bairro em três dimensões: atividade econômica, acessibilidade e qualidade urbana. O app Streamlit é a camada de visualização em cima desse pipeline.
+O pipeline cruza oito bases públicas da PBH e da BHTRANS para produzir um score
+de atratividade por bairro em três dimensões: atividade econômica, acessibilidade
+e qualidade urbana. O app Streamlit é a camada de visualização em cima desse
+pipeline.
 
 | Dimensão | Peso | Fontes |
 |---|---|---|
@@ -28,35 +33,36 @@ OSPA_Place_Case/
 │       ├── qualidade_urbana_por_bairro.parquet
 │       ├── matriz_od_agregada.parquet
 │       ├── score_final.parquet
-│       └── bairros_excluidos.csv   # auditoria de bairros descartados no ETL
+│       └── bairros_excluidos.csv   # auditoria de exclusões do ETL
 │
 ├── etl/
 │   ├── extract.py                  # download via API CKAN
 │   ├── pipeline.py                 # orquestrador
 │   └── transform/
-│       ├── _io.py                  # helpers: leitura de CSV, normalização, fuzzy match
-│       ├── _spatial.py             # helpers: spatial join GeoPandas reutilizável
-│       ├── economico.py            # Pandas
-│       ├── acessibilidade.py       # Pandas + GeoPandas
-│       ├── qualidade_urbana.py     # Pandas
+│       ├── _io.py                  # leitura de CSV, normalização, fuzzy match
+│       ├── _spatial.py             # spatial join GeoPandas reutilizável
+│       ├── economico.py
+│       ├── acessibilidade.py
+│       ├── qualidade_urbana.py
 │       ├── matriz_od.py            # PySpark
-│       └── score.py                # composição final ponderada
+│       └── score.py
 │
 ├── app/
-│   ├── main.py                     # entry point Streamlit
+│   ├── main.py                     # entry point Streamlit (st.navigation)
 │   ├── components/
-│   │   ├── graficos.py             # componentes Plotly reutilizáveis
-│   │   └── mapas.py                # componentes Folium reutilizáveis
+│   │   ├── graficos.py
+│   │   └── mapas.py
 │   └── pages/
-│       ├── 01_panorama_economico.py
-│       ├── 02_infraestrutura_mobilidade.py
-│       ├── 03_oportunidades.py
-│       └── 04_visao_tecnica.py
+│       ├── page_home.py
+│       ├── page_panorama_economico.py
+│       ├── page_infraestrutura.py
+│       ├── page_oportunidades.py
+│       └── page_tecnica.py
 │
 ├── notebooks/
 │   └── exploratory_analysis.ipynb
 │
-├── validate_etl.py                 # validação dos parquets gerados pelo pipeline
+├── validate_etl.py
 ├── Dockerfile
 ├── docker-compose.yml
 └── requirements.txt
@@ -73,44 +79,14 @@ OSPA_Place_Case/
 
 ## Como rodar
 
-### 1. Clone o repositório
-
 ```bash
 git clone https://github.com/ferreirapd/OSPA_Place_Case.git
 cd OSPA_Place_Case
-```
-
-### 2. Build da imagem
-
-```bash
 docker-compose build
-```
-
-A primeira build demora ~3–5 minutos (instala Java + dependências Python).
-Builds subsequentes usam cache e levam ~30 segundos.
-
-### 3. Execute o pipeline ETL
-
-```bash
-docker-compose run app python -m etl.pipeline
-```
-
-Para pular o download se os dados já estiverem em `data/raw/`:
-
-```bash
-docker-compose run app python -m etl.pipeline --skip-extract
-```
-
-### 4. Valide os dados gerados
-
-```bash
-docker-compose run app python validate_etl.py
-```
-
-### 5. Suba o app
-
-```bash
-docker-compose up
+docker-compose run app python -m etl.pipeline               # pipeline completo
+docker-compose run app python -m etl.pipeline --skip-extract  # se já tem data/raw/
+docker-compose run app python validate_etl.py               # validação dos parquets
+docker-compose up                                            # sobe o app em :8501
 ```
 
 Acesse: **http://localhost:8501**
@@ -121,10 +97,15 @@ Acesse: **http://localhost:8501**
 
 | Página | Conteúdo |
 |---|---|
+| Início | Contexto do projeto e fontes |
 | Panorama Econômico | KPIs, ranking de bairros, distribuição setorial |
 | Infraestrutura e Mobilidade | Transporte público, fluxo de passageiros, parques, equipamentos |
-| Mapa de Oportunidades | Score final, quadrante estratégico, perfil detalhado por bairro |
-| Visão Técnica | Pipeline ETL, código-fonte, arquitetura AWS, próximos passos |
+| Mapa de Oportunidades | Score final, quadrante estratégico, perfil por bairro |
+| Pipeline e Arquitetura | Pipeline ETL, código-fonte, arquitetura AWS, próximos passos |
+
+A navegação é controlada via `st.navigation()` em `app/main.py` — o nome no
+menu lateral e a ordem das páginas são definidos lá, independentes dos nomes
+de arquivo.
 
 ---
 
@@ -132,13 +113,13 @@ Acesse: **http://localhost:8501**
 
 | Camada | Tecnologia |
 |---|---|
-| ETL (geral) | Python 3.11 · Pandas 2.2 · GeoPandas · rapidfuzz |
-| ETL (Matriz O-D) | PySpark 3.5 |
+| ETL geral | Python 3.11 · Pandas 2.2 · GeoPandas · rapidfuzz |
+| ETL Matriz O-D | PySpark 3.5 |
 | Extração | Requests (API CKAN) |
 | Visualização | Plotly · Folium · streamlit-folium |
-| App | Streamlit 1.35 |
-| Formato intermediário | Parquet (PyArrow) |
+| App | Streamlit 1.56 |
 | Container | Docker — python:3.11-slim + OpenJDK 21 JRE |
+| Formato intermediário | Parquet (PyArrow) |
 
 ---
 
