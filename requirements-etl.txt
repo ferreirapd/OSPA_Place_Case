@@ -14,7 +14,7 @@ h3==3.7.7
 rapidfuzz==3.9.6
 
 # Streamlit + viz
-streamlit==1.56.0
+streamlit==1.44.1
 plotly==5.22.0
 folium==0.16.0
 streamlit-folium==0.27.1
